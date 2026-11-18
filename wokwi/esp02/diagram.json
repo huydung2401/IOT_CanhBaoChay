@@ -1,0 +1,2005 @@
+{
+  "version": 1,
+  "author": "Nhom CanhBaoChay",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp",
+      "top": 180,
+      "left": -40,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht111",
+      "top": -190,
+      "left": 140,
+      "attrs": {
+        "temperature": "28",
+        "humidity": "60"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "den111",
+      "top": 380,
+      "left": 150,
+      "attrs": {
+        "color": "red",
+        "label": "111"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "coi111",
+      "top": 460,
+      "left": 140,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht112",
+      "top": -190,
+      "left": 230,
+      "attrs": {
+        "temperature": "28",
+        "humidity": "60"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "den112",
+      "top": 380,
+      "left": 240,
+      "attrs": {
+        "color": "red",
+        "label": "112"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "coi112",
+      "top": 460,
+      "left": 230,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht113",
+      "top": -190,
+      "left": 320,
+      "attrs": {
+        "temperature": "28",
+        "humidity": "60"
+      }
+    },
+    {
+      "type": "wokwi-slide-switch",
+      "id": "sw113",
+      "top": -70,
+      "left": 325,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "den113",
+      "top": 380,
+      "left": 330,
+      "attrs": {
+        "color": "red",
+        "label": "113"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "coi113",
+      "top": 460,
+      "left": 320,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht114",
+      "top": -190,
+      "left": 410,
+      "attrs": {
+        "temperature": "28",
+        "humidity": "60"
+      }
+    },
+    {
+      "type": "wokwi-slide-switch",
+      "id": "sw114",
+      "top": -70,
+      "left": 415,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "den114",
+      "top": 380,
+      "left": 420,
+      "attrs": {
+        "color": "red",
+        "label": "114"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "coi114",
+      "top": 460,
+      "left": 410,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht115",
+      "top": -190,
+      "left": 500,
+      "attrs": {
+        "temperature": "28",
+        "humidity": "60"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "den115",
+      "top": 380,
+      "left": 510,
+      "attrs": {
+        "color": "red",
+        "label": "115"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "coi115",
+      "top": 460,
+      "left": 500,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht116",
+      "top": -190,
+      "left": 590,
+      "attrs": {
+        "temperature": "28",
+        "humidity": "60"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "den116",
+      "top": 380,
+      "left": 600,
+      "attrs": {
+        "color": "red",
+        "label": "116"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "coi116",
+      "top": 460,
+      "left": 590,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht117",
+      "top": -190,
+      "left": 680,
+      "attrs": {
+        "temperature": "28",
+        "humidity": "60"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "den117",
+      "top": 380,
+      "left": 690,
+      "attrs": {
+        "color": "red",
+        "label": "117"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "coi117",
+      "top": 460,
+      "left": 680,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht118",
+      "top": -190,
+      "left": 770,
+      "attrs": {
+        "temperature": "28",
+        "humidity": "60"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "den118",
+      "top": 380,
+      "left": 780,
+      "attrs": {
+        "color": "red",
+        "label": "118"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "coi118",
+      "top": 460,
+      "left": 770,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht119",
+      "top": -190,
+      "left": 860,
+      "attrs": {
+        "temperature": "28",
+        "humidity": "60"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "den119",
+      "top": 380,
+      "left": 870,
+      "attrs": {
+        "color": "red",
+        "label": "119"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "coi119",
+      "top": 460,
+      "left": 860,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht120",
+      "top": -190,
+      "left": 950,
+      "attrs": {
+        "temperature": "28",
+        "humidity": "60"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "den120",
+      "top": 380,
+      "left": 960,
+      "attrs": {
+        "color": "red",
+        "label": "120"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "coi120",
+      "top": 460,
+      "left": 950,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-74hc595",
+      "id": "sr1",
+      "top": 200,
+      "left": 180,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-74hc595",
+      "id": "sr2",
+      "top": 200,
+      "left": 410,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-74hc595",
+      "id": "sr3",
+      "top": 200,
+      "left": 640,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-74hc595",
+      "id": "sr4",
+      "top": 200,
+      "left": 870,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-74hc165",
+      "id": "pi1",
+      "top": 60,
+      "left": 300,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-74hc165",
+      "id": "pi2",
+      "top": 60,
+      "left": 720,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-gas-sensor",
+      "id": "khoi111",
+      "top": -330,
+      "left": 130,
+      "attrs": {
+        "ppm": "100"
+      }
+    },
+    {
+      "type": "wokwi-gas-sensor",
+      "id": "khoi112",
+      "top": -330,
+      "left": 220,
+      "attrs": {
+        "ppm": "100"
+      }
+    },
+    {
+      "type": "wokwi-gas-sensor",
+      "id": "khoi113",
+      "top": -330,
+      "left": 310,
+      "attrs": {
+        "ppm": "100"
+      }
+    },
+    {
+      "type": "wokwi-gas-sensor",
+      "id": "khoi114",
+      "top": -330,
+      "left": 400,
+      "attrs": {
+        "ppm": "100"
+      }
+    },
+    {
+      "type": "wokwi-gas-sensor",
+      "id": "khoi115",
+      "top": -330,
+      "left": 490,
+      "attrs": {
+        "ppm": "100"
+      }
+    },
+    {
+      "type": "wokwi-gas-sensor",
+      "id": "khoi116",
+      "top": -330,
+      "left": 580,
+      "attrs": {
+        "ppm": "100"
+      }
+    },
+    {
+      "type": "wokwi-gas-sensor",
+      "id": "khoi117",
+      "top": -330,
+      "left": 670,
+      "attrs": {
+        "ppm": "100"
+      }
+    },
+    {
+      "type": "wokwi-gas-sensor",
+      "id": "khoi118",
+      "top": -330,
+      "left": 760,
+      "attrs": {
+        "ppm": "100"
+      }
+    },
+    {
+      "type": "wokwi-gas-sensor",
+      "id": "khoi119",
+      "top": -330,
+      "left": 850,
+      "attrs": {
+        "ppm": "100"
+      }
+    },
+    {
+      "type": "wokwi-gas-sensor",
+      "id": "khoi120",
+      "top": -330,
+      "left": 940,
+      "attrs": {
+        "ppm": "100"
+      }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "rl111",
+      "top": 560,
+      "left": 120,
+      "attrs": {
+        "transistor": "pnp"
+      },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dien111",
+      "top": 570,
+      "left": 180,
+      "attrs": {
+        "color": "yellow",
+        "label": "điện 111"
+      }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "rl112",
+      "top": 670,
+      "left": 210,
+      "attrs": {
+        "transistor": "pnp"
+      },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dien112",
+      "top": 680,
+      "left": 270,
+      "attrs": {
+        "color": "yellow",
+        "label": "điện 112"
+      }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "rl113",
+      "top": 560,
+      "left": 300,
+      "attrs": {
+        "transistor": "pnp"
+      },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dien113",
+      "top": 570,
+      "left": 360,
+      "attrs": {
+        "color": "yellow",
+        "label": "điện 113"
+      }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "rl114",
+      "top": 670,
+      "left": 390,
+      "attrs": {
+        "transistor": "pnp"
+      },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dien114",
+      "top": 680,
+      "left": 450,
+      "attrs": {
+        "color": "yellow",
+        "label": "điện 114"
+      }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "rl115",
+      "top": 560,
+      "left": 480,
+      "attrs": {
+        "transistor": "pnp"
+      },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dien115",
+      "top": 570,
+      "left": 540,
+      "attrs": {
+        "color": "yellow",
+        "label": "điện 115"
+      }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "rl116",
+      "top": 670,
+      "left": 570,
+      "attrs": {
+        "transistor": "pnp"
+      },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dien116",
+      "top": 680,
+      "left": 630,
+      "attrs": {
+        "color": "yellow",
+        "label": "điện 116"
+      }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "rl117",
+      "top": 560,
+      "left": 660,
+      "attrs": {
+        "transistor": "pnp"
+      },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dien117",
+      "top": 570,
+      "left": 720,
+      "attrs": {
+        "color": "yellow",
+        "label": "điện 117"
+      }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "rl118",
+      "top": 670,
+      "left": 750,
+      "attrs": {
+        "transistor": "pnp"
+      },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dien118",
+      "top": 680,
+      "left": 810,
+      "attrs": {
+        "color": "yellow",
+        "label": "điện 118"
+      }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "rl119",
+      "top": 560,
+      "left": 840,
+      "attrs": {
+        "transistor": "pnp"
+      },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dien119",
+      "top": 570,
+      "left": 900,
+      "attrs": {
+        "color": "yellow",
+        "label": "điện 119"
+      }
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "rl120",
+      "top": 670,
+      "left": 930,
+      "attrs": {
+        "transistor": "pnp"
+      },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dien120",
+      "top": 680,
+      "left": 990,
+      "attrs": {
+        "color": "yellow",
+        "label": "điện 120"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "nutTatTieng",
+      "top": 440,
+      "left": -230,
+      "attrs": {
+        "color": "yellow",
+        "label": "Tắt tiếng / giữ 3s cấp điện"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "nutMqtt",
+      "top": 220,
+      "left": -230,
+      "attrs": {
+        "color": "blue",
+        "label": "MQTT on/off"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rNut",
+      "top": 290,
+      "left": -235,
+      "attrs": {
+        "value": "10000"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "coiChung",
+      "top": 360,
+      "left": -220,
+      "attrs": {
+        "volume": "0.2"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "esp:TX0",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp:RX0",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
+    [
+      "dht111:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "dht111:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "dht111:SDA",
+      "esp:D19",
+      "green",
+      []
+    ],
+    [
+      "den111:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "coi111:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "dht112:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "dht112:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "dht112:SDA",
+      "esp:RX2",
+      "green",
+      []
+    ],
+    [
+      "den112:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "coi112:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "dht113:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "dht113:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "dht113:SDA",
+      "sw113:2",
+      "green",
+      []
+    ],
+    [
+      "sw113:1",
+      "esp:TX2",
+      "green",
+      []
+    ],
+    [
+      "den113:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "coi113:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "dht114:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "dht114:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "dht114:SDA",
+      "sw114:2",
+      "green",
+      []
+    ],
+    [
+      "sw114:1",
+      "esp:D21",
+      "green",
+      []
+    ],
+    [
+      "den114:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "coi114:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "dht115:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "dht115:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "dht115:SDA",
+      "esp:D22",
+      "green",
+      []
+    ],
+    [
+      "den115:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "coi115:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "dht116:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "dht116:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "dht116:SDA",
+      "esp:D25",
+      "green",
+      []
+    ],
+    [
+      "den116:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "coi116:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "dht117:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "dht117:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "dht117:SDA",
+      "esp:D26",
+      "green",
+      []
+    ],
+    [
+      "den117:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "coi117:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "dht118:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "dht118:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "dht118:SDA",
+      "esp:D27",
+      "green",
+      []
+    ],
+    [
+      "den118:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "coi118:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "dht119:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "dht119:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "dht119:SDA",
+      "esp:D32",
+      "green",
+      []
+    ],
+    [
+      "den119:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "coi119:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "dht120:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "dht120:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "dht120:SDA",
+      "esp:D33",
+      "green",
+      []
+    ],
+    [
+      "den120:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "coi120:1",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "sr1:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "sr1:MR",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "sr1:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "sr1:OE",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "sr1:SHCP",
+      "esp:D18",
+      "gold",
+      []
+    ],
+    [
+      "sr1:STCP",
+      "esp:D5",
+      "orange",
+      []
+    ],
+    [
+      "sr1:DS",
+      "esp:D23",
+      "purple",
+      []
+    ],
+    [
+      "sr2:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "sr2:MR",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "sr2:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "sr2:OE",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "sr2:SHCP",
+      "esp:D18",
+      "gold",
+      []
+    ],
+    [
+      "sr2:STCP",
+      "esp:D5",
+      "orange",
+      []
+    ],
+    [
+      "sr2:DS",
+      "sr1:Q7S",
+      "purple",
+      []
+    ],
+    [
+      "sr3:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "sr3:MR",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "sr3:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "sr3:OE",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "sr3:SHCP",
+      "esp:D18",
+      "gold",
+      []
+    ],
+    [
+      "sr3:STCP",
+      "esp:D5",
+      "orange",
+      []
+    ],
+    [
+      "sr3:DS",
+      "sr2:Q7S",
+      "purple",
+      []
+    ],
+    [
+      "sr4:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "sr4:MR",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "sr4:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "sr4:OE",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "sr4:SHCP",
+      "esp:D18",
+      "gold",
+      []
+    ],
+    [
+      "sr4:STCP",
+      "esp:D5",
+      "orange",
+      []
+    ],
+    [
+      "sr4:DS",
+      "sr3:Q7S",
+      "purple",
+      []
+    ],
+    [
+      "sr1:Q0",
+      "den111:A",
+      "green",
+      []
+    ],
+    [
+      "sr1:Q1",
+      "coi111:2",
+      "green",
+      []
+    ],
+    [
+      "sr3:Q4",
+      "rl111:IN",
+      "green",
+      []
+    ],
+    [
+      "sr1:Q2",
+      "den112:A",
+      "green",
+      []
+    ],
+    [
+      "sr1:Q3",
+      "coi112:2",
+      "green",
+      []
+    ],
+    [
+      "sr3:Q5",
+      "rl112:IN",
+      "green",
+      []
+    ],
+    [
+      "sr1:Q4",
+      "den113:A",
+      "green",
+      []
+    ],
+    [
+      "sr1:Q5",
+      "coi113:2",
+      "green",
+      []
+    ],
+    [
+      "sr3:Q6",
+      "rl113:IN",
+      "green",
+      []
+    ],
+    [
+      "sr1:Q6",
+      "den114:A",
+      "green",
+      []
+    ],
+    [
+      "sr1:Q7",
+      "coi114:2",
+      "green",
+      []
+    ],
+    [
+      "sr3:Q7",
+      "rl114:IN",
+      "green",
+      []
+    ],
+    [
+      "sr2:Q0",
+      "den115:A",
+      "green",
+      []
+    ],
+    [
+      "sr2:Q1",
+      "coi115:2",
+      "green",
+      []
+    ],
+    [
+      "sr4:Q0",
+      "rl115:IN",
+      "green",
+      []
+    ],
+    [
+      "sr2:Q2",
+      "den116:A",
+      "green",
+      []
+    ],
+    [
+      "sr2:Q3",
+      "coi116:2",
+      "green",
+      []
+    ],
+    [
+      "sr4:Q1",
+      "rl116:IN",
+      "green",
+      []
+    ],
+    [
+      "sr2:Q4",
+      "den117:A",
+      "green",
+      []
+    ],
+    [
+      "sr2:Q5",
+      "coi117:2",
+      "green",
+      []
+    ],
+    [
+      "sr4:Q2",
+      "rl117:IN",
+      "green",
+      []
+    ],
+    [
+      "sr2:Q6",
+      "den118:A",
+      "green",
+      []
+    ],
+    [
+      "sr2:Q7",
+      "coi118:2",
+      "green",
+      []
+    ],
+    [
+      "sr4:Q3",
+      "rl118:IN",
+      "green",
+      []
+    ],
+    [
+      "sr3:Q0",
+      "den119:A",
+      "green",
+      []
+    ],
+    [
+      "sr3:Q1",
+      "coi119:2",
+      "green",
+      []
+    ],
+    [
+      "sr4:Q4",
+      "rl119:IN",
+      "green",
+      []
+    ],
+    [
+      "sr3:Q2",
+      "den120:A",
+      "green",
+      []
+    ],
+    [
+      "sr3:Q3",
+      "coi120:2",
+      "green",
+      []
+    ],
+    [
+      "sr4:Q5",
+      "rl120:IN",
+      "green",
+      []
+    ],
+    [
+      "pi1:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "pi1:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "pi1:CE",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "pi1:PL",
+      "esp:D4",
+      "orange",
+      []
+    ],
+    [
+      "pi1:CP",
+      "esp:D13",
+      "gold",
+      []
+    ],
+    [
+      "pi2:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "pi2:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "pi2:CE",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "pi2:PL",
+      "esp:D4",
+      "orange",
+      []
+    ],
+    [
+      "pi2:CP",
+      "esp:D13",
+      "gold",
+      []
+    ],
+    [
+      "pi1:Q7",
+      "pi2:DS",
+      "purple",
+      []
+    ],
+    [
+      "pi2:Q7",
+      "esp:D35",
+      "purple",
+      []
+    ],
+    [
+      "pi1:DS",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "pi2:D2",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "pi2:D3",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "pi2:D4",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "pi2:D5",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "pi2:D6",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "pi2:D7",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "khoi111:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "khoi111:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "khoi111:DOUT",
+      "pi1:D0",
+      "green",
+      []
+    ],
+    [
+      "khoi112:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "khoi112:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "khoi112:DOUT",
+      "pi1:D1",
+      "green",
+      []
+    ],
+    [
+      "khoi113:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "khoi113:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "khoi113:DOUT",
+      "pi1:D2",
+      "green",
+      []
+    ],
+    [
+      "khoi114:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "khoi114:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "khoi114:DOUT",
+      "pi1:D3",
+      "green",
+      []
+    ],
+    [
+      "khoi115:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "khoi115:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "khoi115:DOUT",
+      "pi1:D4",
+      "green",
+      []
+    ],
+    [
+      "khoi116:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "khoi116:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "khoi116:DOUT",
+      "pi1:D5",
+      "green",
+      []
+    ],
+    [
+      "khoi117:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "khoi117:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "khoi117:DOUT",
+      "pi1:D6",
+      "green",
+      []
+    ],
+    [
+      "khoi118:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "khoi118:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "khoi118:DOUT",
+      "pi1:D7",
+      "green",
+      []
+    ],
+    [
+      "khoi119:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "khoi119:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "khoi119:DOUT",
+      "pi2:D0",
+      "green",
+      []
+    ],
+    [
+      "khoi120:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "khoi120:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "khoi120:DOUT",
+      "pi2:D1",
+      "green",
+      []
+    ],
+    [
+      "rl111:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "rl111:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl111:COM",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "rl111:NC",
+      "dien111:A",
+      "gold",
+      []
+    ],
+    [
+      "dien111:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl112:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "rl112:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl112:COM",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "rl112:NC",
+      "dien112:A",
+      "gold",
+      []
+    ],
+    [
+      "dien112:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl113:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "rl113:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl113:COM",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "rl113:NC",
+      "dien113:A",
+      "gold",
+      []
+    ],
+    [
+      "dien113:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl114:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "rl114:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl114:COM",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "rl114:NC",
+      "dien114:A",
+      "gold",
+      []
+    ],
+    [
+      "dien114:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl115:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "rl115:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl115:COM",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "rl115:NC",
+      "dien115:A",
+      "gold",
+      []
+    ],
+    [
+      "dien115:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl116:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "rl116:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl116:COM",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "rl116:NC",
+      "dien116:A",
+      "gold",
+      []
+    ],
+    [
+      "dien116:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl117:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "rl117:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl117:COM",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "rl117:NC",
+      "dien117:A",
+      "gold",
+      []
+    ],
+    [
+      "dien117:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl118:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "rl118:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl118:COM",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "rl118:NC",
+      "dien118:A",
+      "gold",
+      []
+    ],
+    [
+      "dien118:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl119:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "rl119:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl119:COM",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "rl119:NC",
+      "dien119:A",
+      "gold",
+      []
+    ],
+    [
+      "dien119:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl120:VCC",
+      "esp:VIN",
+      "red",
+      []
+    ],
+    [
+      "rl120:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "rl120:COM",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "rl120:NC",
+      "dien120:A",
+      "gold",
+      []
+    ],
+    [
+      "dien120:C",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "nutTatTieng:1.r",
+      "esp:D15",
+      "green",
+      []
+    ],
+    [
+      "nutTatTieng:2.r",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "nutMqtt:1.r",
+      "esp:D34",
+      "green",
+      []
+    ],
+    [
+      "nutMqtt:2.r",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "rNut:1",
+      "esp:D34",
+      "green",
+      []
+    ],
+    [
+      "rNut:2",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "coiChung:2",
+      "esp:D2",
+      "green",
+      []
+    ],
+    [
+      "coiChung:1",
+      "esp:GND.1",
+      "black",
+      []
+    ]
+  ],
+  "dependencies": {}
+}

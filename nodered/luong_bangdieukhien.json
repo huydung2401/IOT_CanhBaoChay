@@ -1,0 +1,343 @@
+[
+  {
+    "id": "cbc_tab_bdk",
+    "type": "tab",
+    "label": "BangDieuKhien",
+    "disabled": false,
+    "info": "Task 2 - SRS CanhBaoChay v1.2 mục 3.3, 4.4, 10.\nSơ đồ mặt bằng 20 phòng, 6 trạng thái, bấm phòng mở trang chi tiết."
+  },
+  {
+    "id": "cbc_page_bdk",
+    "type": "ui-page",
+    "name": "Bảng điều khiển",
+    "ui": "cbc_ui_base",
+    "path": "/bangdieukhien",
+    "icon": "home",
+    "layout": "grid",
+    "theme": "cbc_ui_theme",
+    "order": 1,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "cbc_grp_luoi",
+    "type": "ui-group",
+    "name": "Nhà trọ 01 - sơ đồ mặt bằng",
+    "page": "cbc_page_bdk",
+    "width": "12",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "cbc_bdk_inject_ds",
+    "type": "inject",
+    "z": "cbc_tab_bdk",
+    "name": "Khởi động",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "0.1",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 80,
+    "wires": [
+      [
+        "cbc_bdk_fn_ds"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_fn_ds",
+    "type": "function",
+    "z": "cbc_tab_bdk",
+    "name": "Nạp danh sách phòng (DB-07)",
+    "func": "\n// DB-07: danh sách 20 phòng cố định. Phòng chưa từng gửi tin sẽ hiện\n// MẤT KẾT NỐI sau 15 s kể từ lúc Node-RED khởi động (DB-03, K17).\nconst DANH_SACH = {\"esp01\": [\"101\", \"102\", \"103\", \"104\", \"105\", \"106\", \"107\", \"108\", \"109\", \"110\"], \"esp02\": [\"111\", \"112\", \"113\", \"114\", \"115\", \"116\", \"117\", \"118\", \"119\", \"120\"]};\nconst now = Date.now();\nconst cu = flow.get('phong') || {};\nconst phong = {};\nfor (const [thietBi, dsPhong] of Object.entries(DANH_SACH)) {\n    for (const ma of dsPhong) {\n        phong[ma] = (cu[ma] && cu[ma].coTin) ? cu[ma] : {\n            ma_phong: ma, ma_thiet_bi: thietBi, coTin: false, lanCuoi: now,\n            nhiet_do: null, bao_dong: false, loi_cam_bien: false, tinMat: 0,\n            muc: 0, khoi: false, ngat_dien: false, tat_tieng: false, ts: null\n        };\n    }\n}\nflow.set('phong', phong);\nnode.status({ fill: 'blue', shape: 'dot', text: Object.keys(phong).length + ' phòng' });\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cbc_bdk_mqtt_in",
+    "type": "mqtt in",
+    "z": "cbc_tab_bdk",
+    "name": "Dữ liệu phòng",
+    "topic": "canhbaochay_HUIT73915/nhatro01/phong/+/dulieu",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "cbc_broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 140,
+    "y": 160,
+    "wires": [
+      [
+        "cbc_bdk_fn_cn"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_fn_cn",
+    "type": "function",
+    "z": "cbc_tab_bdk",
+    "name": "Cập nhật phòng",
+    "func": "\n// Ghi tin MQTT vào đúng phòng (mục 4.2), theo dõi seq (DB-09)\nconst p = msg.payload;\nif (!p || typeof p !== 'object' || typeof p.ma_phong !== 'string') {\n    node.warn('Tin sai mẫu JSON trên ' + msg.topic + ': ' + JSON.stringify(p));\n    return null;\n}\nconst phong = flow.get('phong');\nif (!phong) return null;                       // chưa nạp danh sách\nconst r = phong[p.ma_phong];\nif (!r) {\n    node.warn('Phòng ngoài danh sách DB-07: ' + p.ma_phong);\n    return null;\n}\nconst now = Date.now();\nif (typeof p.seq === 'number') {\n    if (typeof r.seq === 'number') {\n        if (p.seq < r.seq) r.khoiDongLai = now;                       // seq lùi (về 0): ESP32 reset\n        else if (p.seq > r.seq + 1) r.tinMat = (r.tinMat || 0) + (p.seq - r.seq - 1);\n    }\n    r.seq = p.seq;\n}\nr.coTin = true;\nr.ma_thiet_bi = p.ma_thiet_bi || r.ma_thiet_bi;\nr.nhiet_do = (typeof p.nhiet_do === 'number') ? p.nhiet_do : null;\nr.bao_dong = p.bao_dong === true;\nr.loi_cam_bien = p.loi_cam_bien === true;\n// v1.2 (mục 10.2): thiết bị cũ không gửi \"muc\" thì suy ra từ bao_dong\nr.muc = (typeof p.muc === 'number') ? p.muc : (r.bao_dong ? 2 : 0);\nr.khoi = p.khoi === true;\nr.ngat_dien = p.ngat_dien === true;\nr.tat_tieng = p.tat_tieng === true;\nr.ts = (typeof p.ts === 'number' && p.ts > 0) ? p.ts : null;\nr.lanCuoi = now;\nflow.set('phong', phong);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 160,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cbc_bdk_inject_1s",
+    "type": "inject",
+    "z": "cbc_tab_bdk",
+    "name": "Mỗi 1 s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "1",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "0.5",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 240,
+    "wires": [
+      [
+        "cbc_bdk_fn_tt"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_fn_tt",
+    "type": "function",
+    "z": "cbc_tab_bdk",
+    "name": "Tính trạng thái (mục 4.4)",
+    "func": "\n// Quy tắc hiển thị mục 4.4 + 10.4, xét theo thứ tự, dừng ở điều kiện đúng đầu tiên:\n// MẤT KẾT NỐI > NGUY HIỂM > BÁO ĐỘNG > LỖI CẢM BIẾN > CHÚ Ý > BÌNH THƯỜNG\nconst THOI_GIAN_MAT_KET_NOI_S = 15;\nconst phong = flow.get('phong');\nif (!phong) return null;\nconst now = Date.now();\nconst truoc = context.get('matKhiBaoDong') || {};\nconst ds = [];\nconst tong = { nguyHiem: 0, baoDong: 0, loi: 0, chuY: 0, matKetNoi: 0, binhThuong: 0 };\nconst telegram = [];\n\nfor (const ma of Object.keys(phong).sort()) {\n    const r = phong[ma];\n    const mat = now - r.lanCuoi > THOI_GIAN_MAT_KET_NOI_S * 1000;\n    const loi = r.coTin && (r.loi_cam_bien || r.nhiet_do === null);\n    const muc = r.muc || 0;\n    let trangThai, vienDo = false, ghiChu = '';\n    if (mat) {                                                   // 1. MẤT KẾT NỐI\n        trangThai = 'MẤT KẾT NỐI'; tong.matKetNoi++;\n        if (!r.coTin) ghiChu = 'chưa nhận tin nào';\n        else if (r.bao_dong) { vienDo = true; ghiChu = 'mất kết nối khi đang báo động'; }  // DB-08\n    } else if (muc >= 3) {                                       // 2. NGUY HIỂM\n        trangThai = 'NGUY HIỂM'; tong.nguyHiem++; ghiChu = 'khói + nhiệt cao';\n    } else if (muc >= 2 || r.bao_dong) {                         // 3. BÁO ĐỘNG\n        trangThai = 'BÁO ĐỘNG'; tong.baoDong++;\n        ghiChu = r.khoi ? 'phát hiện khói' : 'nhiệt độ cao';\n        if (loi) { vienDo = true; ghiChu += ', kèm lỗi cảm biến'; }\n    } else if (loi) {                                            // 4. LỖI CẢM BIẾN\n        trangThai = 'LỖI CẢM BIẾN'; tong.loi++;\n    } else if (muc === 1) {                                      // 5. CHÚ Ý\n        trangThai = 'CHÚ Ý'; tong.chuY++; ghiChu = 'nhiệt độ ≥ 38 °C';\n    } else {                                                     // 6. BÌNH THƯỜNG\n        trangThai = 'BÌNH THƯỜNG'; tong.binhThuong++;\n    }\n\n    // DB-10: báo Telegram một lần khi phòng rơi vào \"mất kết nối khi đang báo động\"\n    const mkbd = mat && r.coTin && r.bao_dong;\n    if (mkbd && !truoc[ma]) telegram.push({ payload: { ma_phong: ma, loai: 'mat_ket_noi_khi_bao_dong', luc: now } });\n    truoc[ma] = mkbd;\n\n    ds.push({\n        ma, ma_thiet_bi: r.ma_thiet_bi, trangThai, vienDo, ghiChu, muc,\n        nhietDo: r.nhiet_do, cu: mat, loi: !!loi,\n        khoi: !!r.khoi, ngatDien: !!r.ngat_dien, tatTieng: !!r.tat_tieng,\n        capNhat: r.coTin ? r.lanCuoi : null, seq: (typeof r.seq === 'number') ? r.seq : null,\n        ts: r.ts || null, lechGio: r.ts ? Math.round(now / 1000 - r.ts) : null,\n        khoiDongLai: (r.khoiDongLai && now - r.khoiDongLai < 10 * 60 * 1000) ? r.khoiDongLai : null,\n        tinMat: r.tinMat || 0\n    });\n}\ncontext.set('matKhiBaoDong', truoc);\n\n// MR-16: nhật ký trạng thái. So với lần tính trước, mỗi thay đổi ghi một dòng vào bảng nhat_ky.\nconst nk = [];\nconst cu = context.get('nhatKyTruoc') || {};\nconst NK_SQL = 'INSERT INTO nhat_ky (thoi_gian, ma_phong, ma_thiet_bi, loai, tu, den, nhiet_do, ghi_chu) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)';\nconst ghiNk = (ma, tb, loai, tu, den, t, ghi) => nk.push({ topic: NK_SQL, payload: [now, ma, tb, loai, tu, den, t, ghi || null], muc: 'nk_ghi' });\nconst tatTiengTb = {}, khoiDongTb = {};\nfor (const p of ds) {\n    const r = phong[p.ma];\n    if (!r.coTin) continue;                              // chưa từng có tin: chưa có gì để ghi\n    const t = (typeof p.nhietDo === 'number') ? p.nhietDo : null;\n    const c = cu[p.ma];\n    if (!c) {                                            // lần đầu thấy phòng (Node-RED vừa chạy)\n        if (p.trangThai !== 'BÌNH THƯỜNG') ghiNk(p.ma, p.ma_thiet_bi, 'trang_thai', 'Node-RED khởi động', p.trangThai, t, p.ghiChu);\n    } else {\n        if (c.tt !== p.trangThai) ghiNk(p.ma, p.ma_thiet_bi, 'trang_thai', c.tt, p.trangThai, t, p.ghiChu);\n        if (!p.cu && c.nd !== p.ngatDien) ghiNk(p.ma, p.ma_thiet_bi, 'dien', c.nd ? 'ngắt' : 'có điện', p.ngatDien ? 'ngắt' : 'có điện', t,\n                                               p.ngatDien ? 'rơ-le ngắt điện phòng' : 'đã cấp lại điện (giữ nút 3 s)');\n        if (!p.cu && c.tat !== p.tatTieng) tatTiengTb[p.ma_thiet_bi] = p.tatTieng;\n        if (p.khoiDongLai && p.khoiDongLai !== c.kdl) khoiDongTb[p.ma_thiet_bi] = true;\n    }\n    cu[p.ma] = { tt: p.trangThai, nd: c && p.cu ? c.nd : p.ngatDien, tat: c && p.cu ? c.tat : p.tatTieng, kdl: p.khoiDongLai };\n}\nfor (const [tb, bat] of Object.entries(tatTiengTb))  // tắt tiếng là của cả thiết bị (một tầng): ghi một dòng\n    ghiNk(null, tb, 'tat_tieng', bat ? 'còi bật' : 'tắt tiếng', bat ? 'tắt tiếng' : 'còi bật', null,\n          bat ? 'bấm nút tắt tiếng (5 phút)' : 'hết tắt tiếng');\nfor (const tb of Object.keys(khoiDongTb)) ghiNk(null, tb, 'khoi_dong_lai', null, null, null, 'thiết bị khởi động lại (seq về 0)');\ncontext.set('nhatKyTruoc', cu);\n\nconst kq = { phong: ds, tongHop: tong, luc: now };\nglobal.set('trangThaiPhong', kq);       // cho trang Chi tiết phòng và lệnh Telegram /trangthai\nreturn [{ payload: kq }, telegram.length ? telegram : null, nk.length ? nk : null];\n",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "outputLabels": [
+      "sơ đồ",
+      "Telegram",
+      "nhật ký"
+    ],
+    "x": 380,
+    "y": 240,
+    "wires": [
+      [
+        "cbc_bdk_tpl_luoi"
+      ],
+      [
+        "cbc_bdk_link_tg"
+      ],
+      [
+        "cbc_bdk_link_nk"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_link_nk",
+    "type": "link out",
+    "z": "cbc_tab_bdk",
+    "name": "sang LichSu: nhật ký",
+    "mode": "link",
+    "links": [
+      "cbc_ls_link_nk"
+    ],
+    "x": 640,
+    "y": 320,
+    "wires": []
+  },
+  {
+    "id": "cbc_bdk_tpl_luoi",
+    "type": "ui-template",
+    "z": "cbc_tab_bdk",
+    "group": "cbc_grp_luoi",
+    "page": "",
+    "ui": "",
+    "name": "Sơ đồ mặt bằng (MR-10)",
+    "order": 1,
+    "width": "0",
+    "height": "0",
+    "head": "",
+    "format": "<template>\n  <div class=\"cbc\" v-if=\"msg && msg.payload\">\n    <div class=\"tong-hop\">\n      <span class=\"chip nh\" v-if=\"t.nguyHiem\">Nguy hiểm: {{ t.nguyHiem }}</span>\n      <span class=\"chip bd\">Báo động: {{ t.baoDong }}</span>\n      <span class=\"chip cy\">Chú ý: {{ t.chuY }}</span>\n      <span class=\"chip loi\">Lỗi cảm biến: {{ t.loi }}</span>\n      <span class=\"chip mat\">Mất kết nối: {{ t.matKetNoi }}</span>\n      <span class=\"chip bt\">Bình thường: {{ t.binhThuong }}</span>\n      <span class=\"luc\">Cập nhật {{ gio(msg.payload.luc) }} · bấm vào phòng để xem chi tiết</span>\n    </div>\n    <div v-for=\"tang in cacTang\" :key=\"tang.ten\" class=\"tang\">\n      <div class=\"ten-tang\">{{ tang.ten }}</div>\n      <div class=\"mat-bang\">\n        <div class=\"loi-ra trai\"><span class=\"bieu\">🚪</span><b>LỐI THOÁT</b><span>🪜 Cầu thang A</span></div>\n        <div v-for=\"p in tang.tren\" :key=\"p.ma\" :class=\"oPhong(p)\" @click=\"mo(p)\" :title=\"'Phòng ' + p.ma + ': ' + p.trangThai\">\n          <div class=\"dau\"><b>{{ p.ma }}</b><span class=\"icon\">{{ bieuTuong(p) }}</span></div>\n          <div :class=\"['nhiet', { cu: p.cu }]\">{{ nhiet(p) }}</div>\n          <div class=\"tt\">{{ p.trangThai }}</div>\n        </div>\n        <div class=\"loi-ra phai\"><span class=\"bieu\">🚪</span><b>LỐI THOÁT</b><span>🪜 Cầu thang B</span></div>\n        <div class=\"hanh-lang\">\n          <span>🧯</span><span class=\"chu-hl\">HÀNH LANG · {{ tang.coiChung }}</span><span>🧯</span>\n        </div>\n        <div v-for=\"p in tang.duoi\" :key=\"p.ma\" :class=\"oPhong(p)\" @click=\"mo(p)\" :title=\"'Phòng ' + p.ma + ': ' + p.trangThai\">\n          <div class=\"dau\"><b>{{ p.ma }}</b><span class=\"icon\">{{ bieuTuong(p) }}</span></div>\n          <div :class=\"['nhiet', { cu: p.cu }]\">{{ nhiet(p) }}</div>\n          <div class=\"tt\">{{ p.trangThai }}</div>\n        </div>\n      </div>\n    </div>\n    <div class=\"chu-giai\">\n      <span><i class=\"m bt\"></i>Bình thường</span><span><i class=\"m cy\"></i>Chú ý ≥ 38 °C</span>\n      <span><i class=\"m bd\"></i>Báo động</span><span><i class=\"m nh\"></i>Nguy hiểm</span>\n      <span><i class=\"m loi\"></i>Lỗi cảm biến</span><span><i class=\"m mat\"></i>Mất kết nối</span>\n      <span>💨 khói · 🔌 đã ngắt điện · 🔕 đang tắt tiếng · ⚠️ lỗi cảm biến</span>\n    </div>\n  </div>\n  <div v-else class=\"cho\">Đang chờ dữ liệu...</div>\n</template>\n\n<script>\nexport default {\n  computed: {\n    t() { return this.msg.payload.tongHop; },\n    cacTang() {\n      const ds = this.msg.payload.phong;\n      const tang = [];\n      for (let k = 0; k * 10 < ds.length; k++) {\n        const phong = ds.slice(k * 10, k * 10 + 10);\n        const mucMax = Math.max(0, ...phong.filter(p => !p.cu).map(p => p.muc || 0));\n        const tatTieng = phong.some(p => p.tatTieng && !p.cu);\n        tang.push({\n          ten: 'Tầng ' + (k + 1) + ' (' + (phong[0] ? phong[0].ma_thiet_bi : '') + ')',\n          tren: phong.slice(0, 5), duoi: phong.slice(5, 10),\n          coiChung: tatTieng ? 'còi chung đang tắt tiếng' : (mucMax >= 3 ? 'còi chung KÊU LIÊN TỤC' : mucMax === 2 ? 'còi chung đang kêu' : 'còi chung im')\n        });\n      }\n      return tang;\n    }\n  },\n  methods: {\n    lop(t) {\n      return { 'BÌNH THƯỜNG': 'bt', 'CHÚ Ý': 'cy', 'BÁO ĐỘNG': 'bd', 'NGUY HIỂM': 'nh',\n               'LỖI CẢM BIẾN': 'loi', 'MẤT KẾT NỐI': 'mat' }[t] || '';\n    },\n    oPhong(p) { return ['phong', this.lop(p.trangThai), { 'vien-do': p.vienDo }]; },\n    bieuTuong(p) {\n      return (p.khoi ? '💨' : '') + (p.ngatDien ? '🔌' : '') + (p.tatTieng ? '🔕' : '') + (p.loi && p.trangThai !== 'LỖI CẢM BIẾN' ? '⚠️' : '');\n    },\n    nhiet(p) { return p.nhietDo === null ? '--' : p.nhietDo.toFixed(1) + '°'; },\n    gio(ms) { return new Date(ms).toLocaleTimeString('vi-VN', { hour12: false }); },\n    mo(p) { this.send({ payload: p.ma, muc: 'chi_tiet' }); }\n  }\n}\n</script>\n\n<style scoped>\n.cbc { width: 100%; font-family: system-ui, sans-serif; }\n.tong-hop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }\n.chip { padding: 4px 10px; border-radius: 12px; font-weight: 600; font-size: 14px; }\n.chip.nh { background: #4a0000; color: #fff; }\n.chip.bd { background: #ffebee; color: #b71c1c; }\n.chip.cy { background: #fffde7; color: #8d6e00; }\n.chip.loi { background: #f3e5f5; color: #6a1b9a; }\n.chip.mat { background: #eceff1; color: #455a64; }\n.chip.bt { background: #e8f5e9; color: #1b5e20; }\n.luc { margin-left: auto; color: #607d8b; font-size: 13px; }\n.tang { margin-bottom: 14px; }\n.ten-tang { font-weight: 700; color: #37474f; margin-bottom: 4px; }\n.mat-bang { display: grid; grid-template-columns: 70px repeat(5, minmax(0, 1fr)) 70px;\n            grid-template-rows: auto 34px auto; gap: 6px; background: #cfd8dc; padding: 6px; border-radius: 8px; }\n.loi-ra { grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: center; justify-content: center;\n          gap: 4px; background: #e8f5e9; border: 2px dashed #2e7d32; border-radius: 6px; color: #1b5e20;\n          font-size: 11px; text-align: center; padding: 4px; }\n.loi-ra.trai { grid-column: 1; } .loi-ra.phai { grid-column: 7; }\n.loi-ra .bieu { font-size: 22px; }\n.hanh-lang { grid-column: 2 / span 5; grid-row: 2; display: flex; align-items: center; justify-content: space-between;\n             background: repeating-linear-gradient(90deg, #eceff1 0 18px, #e0e6e9 18px 36px); border-radius: 4px; padding: 0 10px; }\n.chu-hl { color: #546e7a; font-size: 12px; font-weight: 600; letter-spacing: .5px; }\n.phong { border: 2px solid transparent; border-radius: 6px; padding: 6px 8px; min-height: 78px; cursor: pointer;\n         transition: transform .1s; user-select: none; }\n.phong:hover { transform: scale(1.03); box-shadow: 0 2px 6px rgba(0,0,0,.25); }\n.phong.bt { background: #e8f5e9; border-color: #a5d6a7; }\n.phong.cy { background: #fff59d; border-color: #f9a825; }\n.phong.bd { background: #ffcdd2; border-color: #c62828; animation: nhay 1s infinite; }\n.phong.nh { background: #7f0000; border-color: #ff1744; color: #fff; animation: nhay3 .4s infinite; }\n.phong.loi { background: #e1bee7; border-color: #8e24aa; }\n.phong.mat { background: #eceff1; border-color: #90a4ae; }\n.phong.vien-do { border: 4px solid #c62828; }\n@keyframes nhay { 50% { background: #ef9a9a; } }\n@keyframes nhay3 { 50% { background: #d50000; } }\n.dau { display: flex; justify-content: space-between; font-size: 13px; }\n.icon { font-size: 13px; }\n.nhiet { font-size: 22px; font-weight: 700; }\n.nhiet.cu { color: #90a4ae; }\n.tt { font-weight: 700; font-size: 12px; }\n.bt .tt { color: #1b5e20; } .cy .tt { color: #8d6e00; } .bd .tt { color: #b71c1c; }\n.loi .tt { color: #6a1b9a; } .mat .tt { color: #455a64; } .nh .tt { color: #fff; }\n.chu-giai { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: #455a64; align-items: center; }\n.m { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: -2px; }\n.m.bt { background: #a5d6a7; } .m.cy { background: #fdd835; } .m.bd { background: #e57373; }\n.m.nh { background: #7f0000; } .m.loi { background: #ba68c8; } .m.mat { background: #b0bec5; }\n.cho { color: #607d8b; }\n@media (max-width: 760px) {\n  .mat-bang { grid-template-columns: 44px repeat(5, minmax(0, 1fr)) 44px; }\n  .loi-ra b, .loi-ra span:not(.bieu) { display: none; }\n  .nhiet { font-size: 16px; }\n}\n</style>\n",
+    "storeOutMessages": true,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 650,
+    "y": 220,
+    "wires": [
+      [
+        "cbc_bdk_fn_ct"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_fn_ct",
+    "type": "function",
+    "z": "cbc_tab_bdk",
+    "name": "Mở chi tiết phòng (MR-11)",
+    "func": "\n// MR-11: bấm vào một phòng trên sơ đồ -> chuyển sang trang \"Chi tiết phòng\" của đúng trình duyệt đó\nif (msg.muc !== 'chi_tiet' || typeof msg.payload !== 'string') return null;\nglobal.set('phongChiTiet', msg.payload);\nreturn [{ payload: { page: 'Chi tiết phòng' }, _client: msg._client },\n        { payload: msg.payload, muc: 'chi_tiet' }];\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "outputLabels": [
+      "đổi trang",
+      "sang LichSu"
+    ],
+    "x": 900,
+    "y": 220,
+    "wires": [
+      [
+        "cbc_bdk_ctrl"
+      ],
+      [
+        "cbc_bdk_link_ct"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_ctrl",
+    "type": "ui-control",
+    "z": "cbc_tab_bdk",
+    "name": "Đổi trang",
+    "ui": "cbc_ui_base",
+    "events": "all",
+    "x": 1120,
+    "y": 200,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cbc_bdk_link_ct",
+    "type": "link out",
+    "z": "cbc_tab_bdk",
+    "name": "sang LichSu: chi tiết",
+    "mode": "link",
+    "links": [
+      "cbc_ls_link_ct"
+    ],
+    "x": 1120,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "cbc_bdk_link_tg",
+    "type": "link out",
+    "z": "cbc_tab_bdk",
+    "name": "sang LichSu: Telegram",
+    "mode": "link",
+    "links": [
+      "cbc_ls_link_tg"
+    ],
+    "x": 640,
+    "y": 280,
+    "wires": []
+  },
+  {
+    "id": "cbc_broker",
+    "type": "mqtt-broker",
+    "name": "Broker CanhBaoChay",
+    "broker": "broker.emqx.io",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "30",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "cbc_ui_base",
+    "type": "ui-base",
+    "name": "CanhBaoChay",
+    "path": "/dashboard",
+    "includeClientData": true,
+    "acceptsClientConfig": [
+      "ui-notification",
+      "ui-control"
+    ],
+    "showPathInSidebar": false,
+    "navigationStyle": "default",
+    "titleBarStyle": "default"
+  },
+  {
+    "id": "cbc_ui_theme",
+    "type": "ui-theme",
+    "name": "CanhBaoChay",
+    "colors": {
+      "surface": "#263238",
+      "primary": "#c62828",
+      "bgPage": "#eceff1",
+      "groupBg": "#ffffff",
+      "groupOutline": "#cfd8dc"
+    },
+    "sizes": {
+      "density": "default",
+      "pagePadding": "12px",
+      "groupGap": "12px",
+      "groupBorderRadius": "6px",
+      "widgetGap": "12px"
+    }
+  }
+]

@@ -1,0 +1,6 @@
+# Cấu hình cho extension Wokwi trong VS Code
+# Firmware đã biên dịch sẵn; sửa code thì chạy lại wokwi\build_vscode.ps1
+[wokwi]
+version = 1
+firmware = 'build/canhbaochay_esp32.ino.merged.bin'
+elf = 'build/canhbaochay_esp32.ino.elf'

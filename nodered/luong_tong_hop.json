@@ -1,0 +1,1395 @@
+[
+  {
+    "id": "cbc_tab_bdk",
+    "type": "tab",
+    "label": "BangDieuKhien",
+    "disabled": false,
+    "info": "Task 2 - SRS CanhBaoChay v1.2 mục 3.3, 4.4, 10.\nSơ đồ mặt bằng 20 phòng, 6 trạng thái, bấm phòng mở trang chi tiết."
+  },
+  {
+    "id": "cbc_page_bdk",
+    "type": "ui-page",
+    "name": "Bảng điều khiển",
+    "ui": "cbc_ui_base",
+    "path": "/bangdieukhien",
+    "icon": "home",
+    "layout": "grid",
+    "theme": "cbc_ui_theme",
+    "order": 1,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "cbc_grp_luoi",
+    "type": "ui-group",
+    "name": "Nhà trọ 01 - sơ đồ mặt bằng",
+    "page": "cbc_page_bdk",
+    "width": "12",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "cbc_bdk_inject_ds",
+    "type": "inject",
+    "z": "cbc_tab_bdk",
+    "name": "Khởi động",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "0.1",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 80,
+    "wires": [
+      [
+        "cbc_bdk_fn_ds"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_fn_ds",
+    "type": "function",
+    "z": "cbc_tab_bdk",
+    "name": "Nạp danh sách phòng (DB-07)",
+    "func": "\n// DB-07: danh sách 20 phòng cố định. Phòng chưa từng gửi tin sẽ hiện\n// MẤT KẾT NỐI sau 15 s kể từ lúc Node-RED khởi động (DB-03, K17).\nconst DANH_SACH = {\"esp01\": [\"101\", \"102\", \"103\", \"104\", \"105\", \"106\", \"107\", \"108\", \"109\", \"110\"], \"esp02\": [\"111\", \"112\", \"113\", \"114\", \"115\", \"116\", \"117\", \"118\", \"119\", \"120\"]};\nconst now = Date.now();\nconst cu = flow.get('phong') || {};\nconst phong = {};\nfor (const [thietBi, dsPhong] of Object.entries(DANH_SACH)) {\n    for (const ma of dsPhong) {\n        phong[ma] = (cu[ma] && cu[ma].coTin) ? cu[ma] : {\n            ma_phong: ma, ma_thiet_bi: thietBi, coTin: false, lanCuoi: now,\n            nhiet_do: null, bao_dong: false, loi_cam_bien: false, tinMat: 0,\n            muc: 0, khoi: false, ngat_dien: false, tat_tieng: false, ts: null\n        };\n    }\n}\nflow.set('phong', phong);\nnode.status({ fill: 'blue', shape: 'dot', text: Object.keys(phong).length + ' phòng' });\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cbc_bdk_mqtt_in",
+    "type": "mqtt in",
+    "z": "cbc_tab_bdk",
+    "name": "Dữ liệu phòng",
+    "topic": "canhbaochay_HUIT73915/nhatro01/phong/+/dulieu",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "cbc_broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 140,
+    "y": 160,
+    "wires": [
+      [
+        "cbc_bdk_fn_cn"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_fn_cn",
+    "type": "function",
+    "z": "cbc_tab_bdk",
+    "name": "Cập nhật phòng",
+    "func": "\n// Ghi tin MQTT vào đúng phòng (mục 4.2), theo dõi seq (DB-09)\nconst p = msg.payload;\nif (!p || typeof p !== 'object' || typeof p.ma_phong !== 'string') {\n    node.warn('Tin sai mẫu JSON trên ' + msg.topic + ': ' + JSON.stringify(p));\n    return null;\n}\nconst phong = flow.get('phong');\nif (!phong) return null;                       // chưa nạp danh sách\nconst r = phong[p.ma_phong];\nif (!r) {\n    node.warn('Phòng ngoài danh sách DB-07: ' + p.ma_phong);\n    return null;\n}\nconst now = Date.now();\nif (typeof p.seq === 'number') {\n    if (typeof r.seq === 'number') {\n        if (p.seq < r.seq) r.khoiDongLai = now;                       // seq lùi (về 0): ESP32 reset\n        else if (p.seq > r.seq + 1) r.tinMat = (r.tinMat || 0) + (p.seq - r.seq - 1);\n    }\n    r.seq = p.seq;\n}\nr.coTin = true;\nr.ma_thiet_bi = p.ma_thiet_bi || r.ma_thiet_bi;\nr.nhiet_do = (typeof p.nhiet_do === 'number') ? p.nhiet_do : null;\nr.bao_dong = p.bao_dong === true;\nr.loi_cam_bien = p.loi_cam_bien === true;\n// v1.2 (mục 10.2): thiết bị cũ không gửi \"muc\" thì suy ra từ bao_dong\nr.muc = (typeof p.muc === 'number') ? p.muc : (r.bao_dong ? 2 : 0);\nr.khoi = p.khoi === true;\nr.ngat_dien = p.ngat_dien === true;\nr.tat_tieng = p.tat_tieng === true;\nr.ts = (typeof p.ts === 'number' && p.ts > 0) ? p.ts : null;\nr.lanCuoi = now;\nflow.set('phong', phong);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 160,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cbc_bdk_inject_1s",
+    "type": "inject",
+    "z": "cbc_tab_bdk",
+    "name": "Mỗi 1 s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "1",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "0.5",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 240,
+    "wires": [
+      [
+        "cbc_bdk_fn_tt"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_fn_tt",
+    "type": "function",
+    "z": "cbc_tab_bdk",
+    "name": "Tính trạng thái (mục 4.4)",
+    "func": "\n// Quy tắc hiển thị mục 4.4 + 10.4, xét theo thứ tự, dừng ở điều kiện đúng đầu tiên:\n// MẤT KẾT NỐI > NGUY HIỂM > BÁO ĐỘNG > LỖI CẢM BIẾN > CHÚ Ý > BÌNH THƯỜNG\nconst THOI_GIAN_MAT_KET_NOI_S = 15;\nconst phong = flow.get('phong');\nif (!phong) return null;\nconst now = Date.now();\nconst truoc = context.get('matKhiBaoDong') || {};\nconst ds = [];\nconst tong = { nguyHiem: 0, baoDong: 0, loi: 0, chuY: 0, matKetNoi: 0, binhThuong: 0 };\nconst telegram = [];\n\nfor (const ma of Object.keys(phong).sort()) {\n    const r = phong[ma];\n    const mat = now - r.lanCuoi > THOI_GIAN_MAT_KET_NOI_S * 1000;\n    const loi = r.coTin && (r.loi_cam_bien || r.nhiet_do === null);\n    const muc = r.muc || 0;\n    let trangThai, vienDo = false, ghiChu = '';\n    if (mat) {                                                   // 1. MẤT KẾT NỐI\n        trangThai = 'MẤT KẾT NỐI'; tong.matKetNoi++;\n        if (!r.coTin) ghiChu = 'chưa nhận tin nào';\n        else if (r.bao_dong) { vienDo = true; ghiChu = 'mất kết nối khi đang báo động'; }  // DB-08\n    } else if (muc >= 3) {                                       // 2. NGUY HIỂM\n        trangThai = 'NGUY HIỂM'; tong.nguyHiem++; ghiChu = 'khói + nhiệt cao';\n    } else if (muc >= 2 || r.bao_dong) {                         // 3. BÁO ĐỘNG\n        trangThai = 'BÁO ĐỘNG'; tong.baoDong++;\n        ghiChu = r.khoi ? 'phát hiện khói' : 'nhiệt độ cao';\n        if (loi) { vienDo = true; ghiChu += ', kèm lỗi cảm biến'; }\n    } else if (loi) {                                            // 4. LỖI CẢM BIẾN\n        trangThai = 'LỖI CẢM BIẾN'; tong.loi++;\n    } else if (muc === 1) {                                      // 5. CHÚ Ý\n        trangThai = 'CHÚ Ý'; tong.chuY++; ghiChu = 'nhiệt độ ≥ 38 °C';\n    } else {                                                     // 6. BÌNH THƯỜNG\n        trangThai = 'BÌNH THƯỜNG'; tong.binhThuong++;\n    }\n\n    // DB-10: báo Telegram một lần khi phòng rơi vào \"mất kết nối khi đang báo động\"\n    const mkbd = mat && r.coTin && r.bao_dong;\n    if (mkbd && !truoc[ma]) telegram.push({ payload: { ma_phong: ma, loai: 'mat_ket_noi_khi_bao_dong', luc: now } });\n    truoc[ma] = mkbd;\n\n    ds.push({\n        ma, ma_thiet_bi: r.ma_thiet_bi, trangThai, vienDo, ghiChu, muc,\n        nhietDo: r.nhiet_do, cu: mat, loi: !!loi,\n        khoi: !!r.khoi, ngatDien: !!r.ngat_dien, tatTieng: !!r.tat_tieng,\n        capNhat: r.coTin ? r.lanCuoi : null, seq: (typeof r.seq === 'number') ? r.seq : null,\n        ts: r.ts || null, lechGio: r.ts ? Math.round(now / 1000 - r.ts) : null,\n        khoiDongLai: (r.khoiDongLai && now - r.khoiDongLai < 10 * 60 * 1000) ? r.khoiDongLai : null,\n        tinMat: r.tinMat || 0\n    });\n}\ncontext.set('matKhiBaoDong', truoc);\n\n// MR-16: nhật ký trạng thái. So với lần tính trước, mỗi thay đổi ghi một dòng vào bảng nhat_ky.\nconst nk = [];\nconst cu = context.get('nhatKyTruoc') || {};\nconst NK_SQL = 'INSERT INTO nhat_ky (thoi_gian, ma_phong, ma_thiet_bi, loai, tu, den, nhiet_do, ghi_chu) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)';\nconst ghiNk = (ma, tb, loai, tu, den, t, ghi) => nk.push({ topic: NK_SQL, payload: [now, ma, tb, loai, tu, den, t, ghi || null], muc: 'nk_ghi' });\nconst tatTiengTb = {}, khoiDongTb = {};\nfor (const p of ds) {\n    const r = phong[p.ma];\n    if (!r.coTin) continue;                              // chưa từng có tin: chưa có gì để ghi\n    const t = (typeof p.nhietDo === 'number') ? p.nhietDo : null;\n    const c = cu[p.ma];\n    if (!c) {                                            // lần đầu thấy phòng (Node-RED vừa chạy)\n        if (p.trangThai !== 'BÌNH THƯỜNG') ghiNk(p.ma, p.ma_thiet_bi, 'trang_thai', 'Node-RED khởi động', p.trangThai, t, p.ghiChu);\n    } else {\n        if (c.tt !== p.trangThai) ghiNk(p.ma, p.ma_thiet_bi, 'trang_thai', c.tt, p.trangThai, t, p.ghiChu);\n        if (!p.cu && c.nd !== p.ngatDien) ghiNk(p.ma, p.ma_thiet_bi, 'dien', c.nd ? 'ngắt' : 'có điện', p.ngatDien ? 'ngắt' : 'có điện', t,\n                                               p.ngatDien ? 'rơ-le ngắt điện phòng' : 'đã cấp lại điện (giữ nút 3 s)');\n        if (!p.cu && c.tat !== p.tatTieng) tatTiengTb[p.ma_thiet_bi] = p.tatTieng;\n        if (p.khoiDongLai && p.khoiDongLai !== c.kdl) khoiDongTb[p.ma_thiet_bi] = true;\n    }\n    cu[p.ma] = { tt: p.trangThai, nd: c && p.cu ? c.nd : p.ngatDien, tat: c && p.cu ? c.tat : p.tatTieng, kdl: p.khoiDongLai };\n}\nfor (const [tb, bat] of Object.entries(tatTiengTb))  // tắt tiếng là của cả thiết bị (một tầng): ghi một dòng\n    ghiNk(null, tb, 'tat_tieng', bat ? 'còi bật' : 'tắt tiếng', bat ? 'tắt tiếng' : 'còi bật', null,\n          bat ? 'bấm nút tắt tiếng (5 phút)' : 'hết tắt tiếng');\nfor (const tb of Object.keys(khoiDongTb)) ghiNk(null, tb, 'khoi_dong_lai', null, null, null, 'thiết bị khởi động lại (seq về 0)');\ncontext.set('nhatKyTruoc', cu);\n\nconst kq = { phong: ds, tongHop: tong, luc: now };\nglobal.set('trangThaiPhong', kq);       // cho trang Chi tiết phòng và lệnh Telegram /trangthai\nreturn [{ payload: kq }, telegram.length ? telegram : null, nk.length ? nk : null];\n",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "outputLabels": [
+      "sơ đồ",
+      "Telegram",
+      "nhật ký"
+    ],
+    "x": 380,
+    "y": 240,
+    "wires": [
+      [
+        "cbc_bdk_tpl_luoi"
+      ],
+      [
+        "cbc_bdk_link_tg"
+      ],
+      [
+        "cbc_bdk_link_nk"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_link_nk",
+    "type": "link out",
+    "z": "cbc_tab_bdk",
+    "name": "sang LichSu: nhật ký",
+    "mode": "link",
+    "links": [
+      "cbc_ls_link_nk"
+    ],
+    "x": 640,
+    "y": 320,
+    "wires": []
+  },
+  {
+    "id": "cbc_bdk_tpl_luoi",
+    "type": "ui-template",
+    "z": "cbc_tab_bdk",
+    "group": "cbc_grp_luoi",
+    "page": "",
+    "ui": "",
+    "name": "Sơ đồ mặt bằng (MR-10)",
+    "order": 1,
+    "width": "0",
+    "height": "0",
+    "head": "",
+    "format": "<template>\n  <div class=\"cbc\" v-if=\"msg && msg.payload\">\n    <div class=\"tong-hop\">\n      <span class=\"chip nh\" v-if=\"t.nguyHiem\">Nguy hiểm: {{ t.nguyHiem }}</span>\n      <span class=\"chip bd\">Báo động: {{ t.baoDong }}</span>\n      <span class=\"chip cy\">Chú ý: {{ t.chuY }}</span>\n      <span class=\"chip loi\">Lỗi cảm biến: {{ t.loi }}</span>\n      <span class=\"chip mat\">Mất kết nối: {{ t.matKetNoi }}</span>\n      <span class=\"chip bt\">Bình thường: {{ t.binhThuong }}</span>\n      <span class=\"luc\">Cập nhật {{ gio(msg.payload.luc) }} · bấm vào phòng để xem chi tiết</span>\n    </div>\n    <div v-for=\"tang in cacTang\" :key=\"tang.ten\" class=\"tang\">\n      <div class=\"ten-tang\">{{ tang.ten }}</div>\n      <div class=\"mat-bang\">\n        <div class=\"loi-ra trai\"><span class=\"bieu\">🚪</span><b>LỐI THOÁT</b><span>🪜 Cầu thang A</span></div>\n        <div v-for=\"p in tang.tren\" :key=\"p.ma\" :class=\"oPhong(p)\" @click=\"mo(p)\" :title=\"'Phòng ' + p.ma + ': ' + p.trangThai\">\n          <div class=\"dau\"><b>{{ p.ma }}</b><span class=\"icon\">{{ bieuTuong(p) }}</span></div>\n          <div :class=\"['nhiet', { cu: p.cu }]\">{{ nhiet(p) }}</div>\n          <div class=\"tt\">{{ p.trangThai }}</div>\n        </div>\n        <div class=\"loi-ra phai\"><span class=\"bieu\">🚪</span><b>LỐI THOÁT</b><span>🪜 Cầu thang B</span></div>\n        <div class=\"hanh-lang\">\n          <span>🧯</span><span class=\"chu-hl\">HÀNH LANG · {{ tang.coiChung }}</span><span>🧯</span>\n        </div>\n        <div v-for=\"p in tang.duoi\" :key=\"p.ma\" :class=\"oPhong(p)\" @click=\"mo(p)\" :title=\"'Phòng ' + p.ma + ': ' + p.trangThai\">\n          <div class=\"dau\"><b>{{ p.ma }}</b><span class=\"icon\">{{ bieuTuong(p) }}</span></div>\n          <div :class=\"['nhiet', { cu: p.cu }]\">{{ nhiet(p) }}</div>\n          <div class=\"tt\">{{ p.trangThai }}</div>\n        </div>\n      </div>\n    </div>\n    <div class=\"chu-giai\">\n      <span><i class=\"m bt\"></i>Bình thường</span><span><i class=\"m cy\"></i>Chú ý ≥ 38 °C</span>\n      <span><i class=\"m bd\"></i>Báo động</span><span><i class=\"m nh\"></i>Nguy hiểm</span>\n      <span><i class=\"m loi\"></i>Lỗi cảm biến</span><span><i class=\"m mat\"></i>Mất kết nối</span>\n      <span>💨 khói · 🔌 đã ngắt điện · 🔕 đang tắt tiếng · ⚠️ lỗi cảm biến</span>\n    </div>\n  </div>\n  <div v-else class=\"cho\">Đang chờ dữ liệu...</div>\n</template>\n\n<script>\nexport default {\n  computed: {\n    t() { return this.msg.payload.tongHop; },\n    cacTang() {\n      const ds = this.msg.payload.phong;\n      const tang = [];\n      for (let k = 0; k * 10 < ds.length; k++) {\n        const phong = ds.slice(k * 10, k * 10 + 10);\n        const mucMax = Math.max(0, ...phong.filter(p => !p.cu).map(p => p.muc || 0));\n        const tatTieng = phong.some(p => p.tatTieng && !p.cu);\n        tang.push({\n          ten: 'Tầng ' + (k + 1) + ' (' + (phong[0] ? phong[0].ma_thiet_bi : '') + ')',\n          tren: phong.slice(0, 5), duoi: phong.slice(5, 10),\n          coiChung: tatTieng ? 'còi chung đang tắt tiếng' : (mucMax >= 3 ? 'còi chung KÊU LIÊN TỤC' : mucMax === 2 ? 'còi chung đang kêu' : 'còi chung im')\n        });\n      }\n      return tang;\n    }\n  },\n  methods: {\n    lop(t) {\n      return { 'BÌNH THƯỜNG': 'bt', 'CHÚ Ý': 'cy', 'BÁO ĐỘNG': 'bd', 'NGUY HIỂM': 'nh',\n               'LỖI CẢM BIẾN': 'loi', 'MẤT KẾT NỐI': 'mat' }[t] || '';\n    },\n    oPhong(p) { return ['phong', this.lop(p.trangThai), { 'vien-do': p.vienDo }]; },\n    bieuTuong(p) {\n      return (p.khoi ? '💨' : '') + (p.ngatDien ? '🔌' : '') + (p.tatTieng ? '🔕' : '') + (p.loi && p.trangThai !== 'LỖI CẢM BIẾN' ? '⚠️' : '');\n    },\n    nhiet(p) { return p.nhietDo === null ? '--' : p.nhietDo.toFixed(1) + '°'; },\n    gio(ms) { return new Date(ms).toLocaleTimeString('vi-VN', { hour12: false }); },\n    mo(p) { this.send({ payload: p.ma, muc: 'chi_tiet' }); }\n  }\n}\n</script>\n\n<style scoped>\n.cbc { width: 100%; font-family: system-ui, sans-serif; }\n.tong-hop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }\n.chip { padding: 4px 10px; border-radius: 12px; font-weight: 600; font-size: 14px; }\n.chip.nh { background: #4a0000; color: #fff; }\n.chip.bd { background: #ffebee; color: #b71c1c; }\n.chip.cy { background: #fffde7; color: #8d6e00; }\n.chip.loi { background: #f3e5f5; color: #6a1b9a; }\n.chip.mat { background: #eceff1; color: #455a64; }\n.chip.bt { background: #e8f5e9; color: #1b5e20; }\n.luc { margin-left: auto; color: #607d8b; font-size: 13px; }\n.tang { margin-bottom: 14px; }\n.ten-tang { font-weight: 700; color: #37474f; margin-bottom: 4px; }\n.mat-bang { display: grid; grid-template-columns: 70px repeat(5, minmax(0, 1fr)) 70px;\n            grid-template-rows: auto 34px auto; gap: 6px; background: #cfd8dc; padding: 6px; border-radius: 8px; }\n.loi-ra { grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: center; justify-content: center;\n          gap: 4px; background: #e8f5e9; border: 2px dashed #2e7d32; border-radius: 6px; color: #1b5e20;\n          font-size: 11px; text-align: center; padding: 4px; }\n.loi-ra.trai { grid-column: 1; } .loi-ra.phai { grid-column: 7; }\n.loi-ra .bieu { font-size: 22px; }\n.hanh-lang { grid-column: 2 / span 5; grid-row: 2; display: flex; align-items: center; justify-content: space-between;\n             background: repeating-linear-gradient(90deg, #eceff1 0 18px, #e0e6e9 18px 36px); border-radius: 4px; padding: 0 10px; }\n.chu-hl { color: #546e7a; font-size: 12px; font-weight: 600; letter-spacing: .5px; }\n.phong { border: 2px solid transparent; border-radius: 6px; padding: 6px 8px; min-height: 78px; cursor: pointer;\n         transition: transform .1s; user-select: none; }\n.phong:hover { transform: scale(1.03); box-shadow: 0 2px 6px rgba(0,0,0,.25); }\n.phong.bt { background: #e8f5e9; border-color: #a5d6a7; }\n.phong.cy { background: #fff59d; border-color: #f9a825; }\n.phong.bd { background: #ffcdd2; border-color: #c62828; animation: nhay 1s infinite; }\n.phong.nh { background: #7f0000; border-color: #ff1744; color: #fff; animation: nhay3 .4s infinite; }\n.phong.loi { background: #e1bee7; border-color: #8e24aa; }\n.phong.mat { background: #eceff1; border-color: #90a4ae; }\n.phong.vien-do { border: 4px solid #c62828; }\n@keyframes nhay { 50% { background: #ef9a9a; } }\n@keyframes nhay3 { 50% { background: #d50000; } }\n.dau { display: flex; justify-content: space-between; font-size: 13px; }\n.icon { font-size: 13px; }\n.nhiet { font-size: 22px; font-weight: 700; }\n.nhiet.cu { color: #90a4ae; }\n.tt { font-weight: 700; font-size: 12px; }\n.bt .tt { color: #1b5e20; } .cy .tt { color: #8d6e00; } .bd .tt { color: #b71c1c; }\n.loi .tt { color: #6a1b9a; } .mat .tt { color: #455a64; } .nh .tt { color: #fff; }\n.chu-giai { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: #455a64; align-items: center; }\n.m { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: -2px; }\n.m.bt { background: #a5d6a7; } .m.cy { background: #fdd835; } .m.bd { background: #e57373; }\n.m.nh { background: #7f0000; } .m.loi { background: #ba68c8; } .m.mat { background: #b0bec5; }\n.cho { color: #607d8b; }\n@media (max-width: 760px) {\n  .mat-bang { grid-template-columns: 44px repeat(5, minmax(0, 1fr)) 44px; }\n  .loi-ra b, .loi-ra span:not(.bieu) { display: none; }\n  .nhiet { font-size: 16px; }\n}\n</style>\n",
+    "storeOutMessages": true,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 650,
+    "y": 220,
+    "wires": [
+      [
+        "cbc_bdk_fn_ct"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_fn_ct",
+    "type": "function",
+    "z": "cbc_tab_bdk",
+    "name": "Mở chi tiết phòng (MR-11)",
+    "func": "\n// MR-11: bấm vào một phòng trên sơ đồ -> chuyển sang trang \"Chi tiết phòng\" của đúng trình duyệt đó\nif (msg.muc !== 'chi_tiet' || typeof msg.payload !== 'string') return null;\nglobal.set('phongChiTiet', msg.payload);\nreturn [{ payload: { page: 'Chi tiết phòng' }, _client: msg._client },\n        { payload: msg.payload, muc: 'chi_tiet' }];\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "outputLabels": [
+      "đổi trang",
+      "sang LichSu"
+    ],
+    "x": 900,
+    "y": 220,
+    "wires": [
+      [
+        "cbc_bdk_ctrl"
+      ],
+      [
+        "cbc_bdk_link_ct"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_bdk_ctrl",
+    "type": "ui-control",
+    "z": "cbc_tab_bdk",
+    "name": "Đổi trang",
+    "ui": "cbc_ui_base",
+    "events": "all",
+    "x": 1120,
+    "y": 200,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cbc_bdk_link_ct",
+    "type": "link out",
+    "z": "cbc_tab_bdk",
+    "name": "sang LichSu: chi tiết",
+    "mode": "link",
+    "links": [
+      "cbc_ls_link_ct"
+    ],
+    "x": 1120,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "cbc_bdk_link_tg",
+    "type": "link out",
+    "z": "cbc_tab_bdk",
+    "name": "sang LichSu: Telegram",
+    "mode": "link",
+    "links": [
+      "cbc_ls_link_tg"
+    ],
+    "x": 640,
+    "y": 280,
+    "wires": []
+  },
+  {
+    "id": "cbc_tab_ls",
+    "type": "tab",
+    "label": "LichSu",
+    "disabled": false,
+    "info": "Task 3 - SRS CanhBaoChay v1.2 mục 3.4, 7.4, 10.\nSQLite: su_kien, do_nhiet. Trang Chi tiết phòng.\nTelegram 2 chiều: đặt biến môi trường của tab (TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_CHAT_ID_2 tuỳ chọn).",
+    "env": [
+      {
+        "name": "TELEGRAM_TOKEN",
+        "value": "",
+        "type": "str"
+      },
+      {
+        "name": "TELEGRAM_CHAT_ID",
+        "value": "",
+        "type": "str"
+      },
+      {
+        "name": "TELEGRAM_CHAT_ID_2",
+        "value": "",
+        "type": "str"
+      },
+      {
+        "name": "TELEGRAM_API",
+        "value": "",
+        "type": "str"
+      }
+    ]
+  },
+  {
+    "id": "cbc_sqlite_db",
+    "type": "sqlitedb",
+    "db": "canhbaochay.db",
+    "mode": "RWC"
+  },
+  {
+    "id": "cbc_page_ls",
+    "type": "ui-page",
+    "name": "Lịch sử",
+    "ui": "cbc_ui_base",
+    "path": "/lichsu",
+    "icon": "history",
+    "layout": "grid",
+    "theme": "cbc_ui_theme",
+    "order": 2,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "cbc_grp_bieudo",
+    "type": "ui-group",
+    "name": "Biểu đồ nhiệt độ",
+    "page": "cbc_page_ls",
+    "width": "12",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "cbc_grp_sukien",
+    "type": "ui-group",
+    "name": "Các đợt báo động (50 đợt mới nhất)",
+    "page": "cbc_page_ls",
+    "width": "12",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "cbc_grp_nk",
+    "type": "ui-group",
+    "name": "Nhật ký trạng thái",
+    "page": "cbc_page_ls",
+    "width": "12",
+    "height": "1",
+    "order": 3,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "cbc_page_ct",
+    "type": "ui-page",
+    "name": "Chi tiết phòng",
+    "ui": "cbc_ui_base",
+    "path": "/chitiet",
+    "icon": "door",
+    "layout": "grid",
+    "theme": "cbc_ui_theme",
+    "order": 3,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "cbc_grp_ct",
+    "type": "ui-group",
+    "name": "Chi tiết phòng",
+    "page": "cbc_page_ct",
+    "width": "12",
+    "height": "1",
+    "order": 1,
+    "showTitle": false,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "cbc_ls_inject_kt",
+    "type": "inject",
+    "z": "cbc_tab_ls",
+    "name": "Khởi động",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "0.1",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 60,
+    "wires": [
+      [
+        "cbc_ls_fn_kt"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_kt",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Tạo bảng (tuần tự)",
+    "func": "\n// Ghi chú: node sqlite chỉ gắn tham số khi số dấu $ bằng số phần tử msg.payload, nên dùng $1, $2...\n// Chạy tuần tự: mỗi câu lệnh xong mới gửi câu kế tiếp (tránh SELECT trước CREATE).\n// CSDL tạo từ bản v1.1 thiếu các cột v1.2: đọc PRAGMA rồi ALTER TABLE đúng cột còn thiếu.\nconst TAO = [\n    'CREATE TABLE IF NOT EXISTS su_kien (id INTEGER PRIMARY KEY AUTOINCREMENT, ma_phong TEXT NOT NULL, bat_dau INTEGER NOT NULL, ket_thuc INTEGER, nhiet_do_max REAL, muc_max INTEGER, co_khoi INTEGER, ngat_dien INTEGER, xac_nhan_boi TEXT, xac_nhan_luc INTEGER)',\n    'CREATE TABLE IF NOT EXISTS do_nhiet (ma_phong TEXT NOT NULL, thoi_gian INTEGER NOT NULL, nhiet_do REAL NOT NULL)',\n    'CREATE INDEX IF NOT EXISTS ix_do_nhiet ON do_nhiet (ma_phong, thoi_gian)',\n    'CREATE INDEX IF NOT EXISTS ix_su_kien ON su_kien (ma_phong, bat_dau)',\n    'CREATE TABLE IF NOT EXISTS nhat_ky (id INTEGER PRIMARY KEY AUTOINCREMENT, thoi_gian INTEGER NOT NULL, ma_phong TEXT, ma_thiet_bi TEXT, loai TEXT NOT NULL, tu TEXT, den TEXT, nhiet_do REAL, ghi_chu TEXT)',\n    'CREATE INDEX IF NOT EXISTS ix_nhat_ky ON nhat_ky (thoi_gian)',\n    'CREATE INDEX IF NOT EXISTS ix_nhat_ky_phong ON nhat_ky (ma_phong, thoi_gian)',\n    'PRAGMA table_info(su_kien)'\n];\nconst COT_V12 = { muc_max: 'INTEGER', co_khoi: 'INTEGER', ngat_dien: 'INTEGER', xac_nhan_boi: 'TEXT', xac_nhan_luc: 'INTEGER' };\nlet hang;\nif (msg.muc !== 'khoitao') {\n    hang = TAO.slice();                                   // bắt đầu từ inject \"Khởi động\"\n} else {\n    hang = context.get('hang') || [];\n    if (msg.topic === 'PRAGMA table_info(su_kien)') {\n        const co = new Set((msg.payload || []).map(r => r.name));\n        for (const [cot, kieu] of Object.entries(COT_V12)) {\n            if (!co.has(cot)) hang.push(`ALTER TABLE su_kien ADD COLUMN ${cot} ${kieu}`);\n        }\n        if (hang.length) node.warn('Nâng cấp bảng su_kien lên v1.2: ' + hang.join('; '));\n    }\n}\nif (hang.length) {\n    const sql = hang.shift();\n    context.set('hang', hang);\n    return { topic: sql, payload: [], muc: 'khoitao' };\n}\n// LS-04, K12: nạp các đợt còn mở để đóng đúng sau khi Node-RED khởi động lại\nreturn { topic: 'SELECT ma_phong, bat_dau, nhiet_do_max, muc_max, co_khoi, ngat_dien FROM su_kien WHERE ket_thuc IS NULL', payload: [], muc: 'dot_mo' };\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 60,
+    "wires": [
+      [
+        "cbc_ls_sqlite"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_mqtt_in",
+    "type": "mqtt in",
+    "z": "cbc_tab_ls",
+    "name": "Dữ liệu phòng",
+    "topic": "canhbaochay_HUIT73915/nhatro01/phong/+/dulieu",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "cbc_broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 130,
+    "y": 140,
+    "wires": [
+      [
+        "cbc_ls_fn_dot"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_dot",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Phát hiện đợt (LS-02)",
+    "func": "\n// LS-02 + MR-12: phát hiện đợt báo động (bao_dong = muc >= 2). Chỉ đóng đợt khi nhận tin\n// bao_dong = false; mất kết nối (không có tin) thì không làm gì, đợt vẫn mở (K18).\n// Trong đợt ghi lại cấp cao nhất, có khói hay không, có ngắt điện hay không.\nfunction xuLy(p) {\n    const sql = [], tg = [];\n    if (!p || typeof p.ma_phong !== 'string') return [sql, tg];\n    const now = Date.now();\n    const ma = p.ma_phong;\n    const t = (typeof p.nhiet_do === 'number') ? p.nhiet_do : null;\n    const muc = (typeof p.muc === 'number') ? p.muc : (p.bao_dong === true ? 2 : 0);\n    const khoi = p.khoi === true, nd = p.ngat_dien === true;\n    if (t !== null) {\n        sql.push({ topic: 'INSERT INTO do_nhiet (ma_phong, thoi_gian, nhiet_do) VALUES ($1, $2, $3)', payload: [ma, now, t], muc: 'ghi_nhiet' });\n    }\n    const dotMo = flow.get('dotMo') || {};\n    const dot = dotMo[ma];\n    if (p.bao_dong === true && !dot) {\n        dotMo[ma] = { batDau: now, tmax: t, mucMax: muc, khoi, ngatDien: nd };\n        sql.push({ topic: 'INSERT INTO su_kien (ma_phong, bat_dau, ket_thuc, nhiet_do_max, muc_max, co_khoi, ngat_dien) VALUES ($1, $2, NULL, $3, $4, $5, $6)',\n                   payload: [ma, now, t, muc, khoi ? 1 : 0, nd ? 1 : 0], muc: 'su_kien' });\n        tg.push({ payload: { ma_phong: ma, loai: muc >= 3 ? 'nguy_hiem' : 'bao_dong', nhiet_do: t, muc, khoi, ngat_dien: nd, luc: now, batDau: now } });\n    } else if (p.bao_dong === true && dot) {\n        let doi = false;\n        if (t !== null && (dot.tmax === null || t > dot.tmax)) { dot.tmax = t; doi = true; }   // bỏ qua null (lỗi cảm biến)\n        if (muc > dot.mucMax) {\n            if (muc >= 3) tg.push({ payload: { ma_phong: ma, loai: 'nguy_hiem', nhiet_do: t, muc, khoi, ngat_dien: nd, luc: now, batDau: dot.batDau } });\n            dot.mucMax = muc; doi = true;\n        }\n        if (khoi && !dot.khoi) { dot.khoi = true; doi = true; }\n        if (nd && !dot.ngatDien) { dot.ngatDien = true; doi = true; }\n        if (doi) {\n            sql.push({ topic: 'UPDATE su_kien SET nhiet_do_max = $1, muc_max = $2, co_khoi = $3, ngat_dien = $4 WHERE ma_phong = $5 AND ket_thuc IS NULL',\n                       payload: [dot.tmax, dot.mucMax, dot.khoi ? 1 : 0, dot.ngatDien ? 1 : 0, ma], muc: 'su_kien' });\n        }\n    } else if (p.bao_dong === false && dot) {\n        delete dotMo[ma];\n        sql.push({ topic: 'UPDATE su_kien SET ket_thuc = $1 WHERE ma_phong = $2 AND ket_thuc IS NULL', payload: [now, ma], muc: 'su_kien' });\n        tg.push({ payload: { ma_phong: ma, loai: 'het_bao_dong', nhiet_do: t, luc: now, batDau: dot.batDau, tmax: dot.tmax, mucMax: dot.mucMax, ngat_dien: nd } });\n    }\n    flow.set('dotMo', dotMo);\n    return [sql, tg];\n}\n\n// Chưa nạp xong các đợt đang mở thì xếp hàng, tránh tạo đợt trùng\nif (msg.muc === 'xa_hang_doi') {\n    const hang = context.get('hangDoi') || [];\n    context.set('hangDoi', []);\n    const ra = [[], []];\n    for (const p of hang) { const r = xuLy(p); ra[0].push(...r[0]); ra[1].push(...r[1]); }\n    return ra;\n}\nif (!flow.get('sanSang')) {\n    const hang = context.get('hangDoi') || [];\n    hang.push(msg.payload);\n    context.set('hangDoi', hang.slice(-500));\n    return null;\n}\nreturn xuLy(msg.payload);\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 160,
+    "wires": [
+      [
+        "cbc_ls_sqlite"
+      ],
+      [
+        "cbc_ls_fn_tg"
+      ]
+    ],
+    "outputLabels": [
+      "SQLite",
+      "Telegram"
+    ]
+  },
+  {
+    "id": "cbc_ls_sqlite",
+    "type": "sqlite",
+    "z": "cbc_tab_ls",
+    "mydb": "cbc_sqlite_db",
+    "sqlquery": "msg.topic",
+    "sql": "",
+    "name": "CSDL lịch sử",
+    "x": 620,
+    "y": 120,
+    "wires": [
+      [
+        "cbc_ls_switch"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_switch",
+    "type": "switch",
+    "z": "cbc_tab_ls",
+    "name": "Phân loại kết quả",
+    "property": "muc",
+    "propertyType": "msg",
+    "rules": [
+      {
+        "t": "eq",
+        "v": "khoitao",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "dot_mo",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "su_kien",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "bang",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "bieudo",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "ct_nhiet",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "ct_sukien",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "tg_lichsu",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "ct_nk",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "nk_bang",
+        "vt": "str"
+      }
+    ],
+    "checkall": "false",
+    "repair": false,
+    "outputs": 10,
+    "outputLabels": [
+      "khoitao",
+      "dot_mo",
+      "su_kien",
+      "bang",
+      "bieudo",
+      "ct_nhiet",
+      "ct_sukien",
+      "tg_lichsu",
+      "ct_nk",
+      "nk_bang"
+    ],
+    "x": 820,
+    "y": 120,
+    "wires": [
+      [
+        "cbc_ls_fn_kt"
+      ],
+      [
+        "cbc_ls_fn_dotmo"
+      ],
+      [
+        "cbc_ls_change_bang"
+      ],
+      [
+        "cbc_ls_tpl_sk"
+      ],
+      [
+        "cbc_ls_fn_ddbd"
+      ],
+      [
+        "cbc_ls_fn_ctsk"
+      ],
+      [
+        "cbc_ls_fn_ctnk"
+      ],
+      [
+        "cbc_ls_fn_tgls"
+      ],
+      [
+        "cbc_ls_fn_ctghep"
+      ],
+      [
+        "cbc_ls_fn_nkdd"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_dotmo",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Nạp đợt đang mở",
+    "func": "\nconst dotMo = {};\nfor (const r of (msg.payload || [])) dotMo[r.ma_phong] = {\n    batDau: r.bat_dau, tmax: r.nhiet_do_max, mucMax: r.muc_max || 2, khoi: !!r.co_khoi, ngatDien: !!r.ngat_dien };\nflow.set('dotMo', dotMo);\nflow.set('sanSang', true);\nnode.status({ fill: 'green', shape: 'dot', text: 'CSDL sẵn sàng, ' + Object.keys(dotMo).length + ' đợt đang mở' });\nreturn [{ muc: 'xa_hang_doi' }, { topic: \"SELECT id, ma_phong, bat_dau, ket_thuc, nhiet_do_max, muc_max, co_khoi, ngat_dien, xac_nhan_boi, xac_nhan_luc FROM su_kien ORDER BY bat_dau DESC LIMIT 50\", payload: [], muc: 'bang' }];\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1040,
+    "y": 60,
+    "wires": [
+      [
+        "cbc_ls_fn_dot"
+      ],
+      [
+        "cbc_ls_sqlite"
+      ]
+    ],
+    "outputLabels": [
+      "xả hàng đợi",
+      "làm mới bảng"
+    ]
+  },
+  {
+    "id": "cbc_ls_change_bang",
+    "type": "change",
+    "z": "cbc_tab_ls",
+    "name": "Truy vấn bảng sự kiện",
+    "rules": [
+      {
+        "t": "set",
+        "p": "topic",
+        "pt": "msg",
+        "to": "SELECT id, ma_phong, bat_dau, ket_thuc, nhiet_do_max, muc_max, co_khoi, ngat_dien, xac_nhan_boi, xac_nhan_luc FROM su_kien ORDER BY bat_dau DESC LIMIT 50",
+        "tot": "str"
+      },
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "[]",
+        "tot": "json"
+      },
+      {
+        "t": "set",
+        "p": "muc",
+        "pt": "msg",
+        "to": "bang",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 1060,
+    "y": 120,
+    "wires": [
+      [
+        "cbc_ls_sqlite"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_tpl_sk",
+    "type": "ui-template",
+    "z": "cbc_tab_ls",
+    "group": "cbc_grp_sukien",
+    "page": "",
+    "ui": "",
+    "name": "Bảng sự kiện (LS-03)",
+    "order": 1,
+    "width": "0",
+    "height": "0",
+    "head": "",
+    "format": "<template>\n  <div class=\"sk\">\n    <table v-if=\"ds.length\">\n      <thead>\n        <tr><th>Phòng</th><th>Bắt đầu</th><th>Kết thúc</th><th>Kéo dài</th><th>Cao nhất</th><th>Cấp</th><th>Khói</th><th>Ngắt điện</th><th>Xác nhận</th></tr>\n      </thead>\n      <tbody>\n        <tr v-for=\"r in ds\" :key=\"r.id\" :class=\"{ mo: r.ket_thuc === null }\">\n          <td class=\"ma\">{{ r.ma_phong }}</td>\n          <td>{{ ngayGio(r.bat_dau) }}</td>\n          <td>{{ r.ket_thuc === null ? 'đang báo động' : ngayGio(r.ket_thuc) }}</td>\n          <td>{{ keoDai(r) }}</td>\n          <td>{{ r.nhiet_do_max === null ? '--' : r.nhiet_do_max.toFixed(1) + ' °C' }}</td>\n          <td><span :class=\"['cap', 'c' + (r.muc_max || 2)]\">{{ (r.muc_max || 2) >= 3 ? 'NGUY HIỂM' : 'BÁO ĐỘNG' }}</span></td>\n          <td>{{ r.co_khoi ? '💨 có' : '-' }}</td>\n          <td>{{ r.ngat_dien ? '🔌 có' : '-' }}</td>\n          <td>{{ r.xac_nhan_boi ? r.xac_nhan_boi + ' · ' + gioNgan(r.xac_nhan_luc) : (r.ket_thuc === null ? 'chưa' : '-') }}</td>\n        </tr>\n      </tbody>\n    </table>\n    <div v-else class=\"trong\">Chưa có đợt báo động nào.</div>\n  </div>\n</template>\n\n<script>\nexport default {\n  computed: {\n    ds() { return (this.msg && Array.isArray(this.msg.payload)) ? this.msg.payload : []; }\n  },\n  methods: {\n    ngayGio(ms) {\n      return new Date(ms).toLocaleString('vi-VN', { hour12: false, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });\n    },\n    gioNgan(ms) { return ms ? new Date(ms).toLocaleTimeString('vi-VN', { hour12: false, hour: '2-digit', minute: '2-digit' }) : ''; },\n    keoDai(r) {\n      const s = Math.round(((r.ket_thuc === null ? Date.now() : r.ket_thuc) - r.bat_dau) / 1000);\n      return s < 60 ? s + ' s' : Math.floor(s / 60) + ' ph ' + (s % 60) + ' s';\n    }\n  }\n}\n</script>\n\n<style scoped>\n.sk { width: 100%; font-family: system-ui, sans-serif; overflow-x: auto; }\ntable { width: 100%; border-collapse: collapse; font-size: 14px; }\nth { text-align: left; color: #455a64; border-bottom: 2px solid #cfd8dc; padding: 6px 8px; }\ntd { border-bottom: 1px solid #eceff1; padding: 6px 8px; }\ntr.mo td { background: #ffebee; color: #b71c1c; font-weight: 600; }\n.ma { font-weight: 700; }\n.trong { color: #607d8b; }\n.cap { padding: 1px 6px; border-radius: 8px; font-size: 12px; font-weight: 700; }\n.cap.c2 { background: #ffcdd2; color: #b71c1c; }\n.cap.c3 { background: #7f0000; color: #fff; }\n</style>\n",
+    "storeOutMessages": true,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1060,
+    "y": 180,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cbc_ls_inject_bd",
+    "type": "inject",
+    "z": "cbc_tab_ls",
+    "name": "Mỗi 5 s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "5",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 300,
+    "wires": [
+      [
+        "cbc_ls_fn_tvbd"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_tvbd",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Truy vấn biểu đồ",
+    "func": "\n// LS-01: lấy 30 phút gần nhất của phòng đang chọn\nif (msg.muc === 'chon_phong' && typeof msg.payload === 'string') flow.set('phongChon', msg.payload);\nconst ma = flow.get('phongChon') || '101';\nconst tu = Date.now() - 30 * 60 * 1000;\nreturn { topic: 'SELECT thoi_gian, nhiet_do FROM do_nhiet WHERE ma_phong = $1 AND thoi_gian >= $2 ORDER BY thoi_gian',\n         payload: [ma, tu], muc: 'bieudo', phong: ma, tu };\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 300,
+    "wires": [
+      [
+        "cbc_ls_sqlite"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_ddbd",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Định dạng biểu đồ",
+    "func": "\nconst rows = msg.payload || [];\nmsg.payload = {\n    phong: msg.phong, tu: msg.tu, den: Date.now(),\n    diem: rows.map(r => [r.thoi_gian, r.nhiet_do]),\n    nguongBat: 45, nguongTat: 40, nguongChuY: 38\n};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1060,
+    "y": 240,
+    "wires": [
+      [
+        "cbc_ls_tpl_bd"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_tpl_bd",
+    "type": "ui-template",
+    "z": "cbc_tab_ls",
+    "group": "cbc_grp_bieudo",
+    "page": "",
+    "ui": "",
+    "name": "Biểu đồ nhiệt độ (LS-01)",
+    "order": 1,
+    "width": "0",
+    "height": "0",
+    "head": "",
+    "format": "<template>\n  <div class=\"bd\">\n    <div class=\"hang\">\n      <label>Phòng\n        <select v-model=\"phong\" @change=\"chon\">\n          <option v-for=\"p in dsPhong\" :key=\"p\" :value=\"p\">{{ p }}</option>\n        </select>\n      </label>\n      <span class=\"ghi\">30 phút gần nhất · {{ soDiem }} điểm · nét đứt: báo động 45 °C / tắt 40 °C / chú ý 38 °C</span>\n    </div>\n    <svg viewBox=\"0 0 800 280\" class=\"khung\" role=\"img\" :aria-label=\"'Nhiệt độ phòng ' + phong\">\n      <g v-for=\"v in vachY\" :key=\"'y' + v\">\n        <line :x1=\"L\" :x2=\"R\" :y1=\"y(v)\" :y2=\"y(v)\" class=\"luoi\" />\n        <text :x=\"L - 6\" :y=\"y(v) + 4\" text-anchor=\"end\" class=\"chu\">{{ v }}</text>\n      </g>\n      <g v-for=\"m in vachX\" :key=\"'x' + m.t\">\n        <text :x=\"x(m.t)\" :y=\"B + 18\" text-anchor=\"middle\" class=\"chu\">{{ m.nhan }}</text>\n      </g>\n      <line :x1=\"L\" :x2=\"R\" :y1=\"y(45)\" :y2=\"y(45)\" class=\"nguong bat\" />\n      <line :x1=\"L\" :x2=\"R\" :y1=\"y(40)\" :y2=\"y(40)\" class=\"nguong tat\" />\n      <line :x1=\"L\" :x2=\"R\" :y1=\"y(38)\" :y2=\"y(38)\" class=\"nguong cy\" />\n      <polyline v-if=\"soDiem > 1\" :points=\"duong\" class=\"duong\" />\n      <circle v-if=\"diemCuoi\" :cx=\"x(diemCuoi[0])\" :cy=\"y(diemCuoi[1])\" r=\"4\" class=\"cham\" />\n      <text v-if=\"diemCuoi\" :x=\"x(diemCuoi[0]) - 8\" :y=\"y(diemCuoi[1]) - 10\" text-anchor=\"end\" class=\"gia-tri\">{{ diemCuoi[1].toFixed(1) }} °C</text>\n      <text v-if=\"soDiem === 0\" x=\"400\" y=\"140\" text-anchor=\"middle\" class=\"chu\">Chưa có dữ liệu cho phòng này</text>\n    </svg>\n  </div>\n</template>\n\n<script>\nexport default {\n  data() {\n    return { phong: '101', dsPhong: [\"101\", \"102\", \"103\", \"104\", \"105\", \"106\", \"107\", \"108\", \"109\", \"110\", \"111\", \"112\", \"113\", \"114\", \"115\", \"116\", \"117\", \"118\", \"119\", \"120\"], L: 48, R: 780, T: 16, B: 244 };\n  },\n  computed: {\n    d() { return (this.msg && this.msg.payload && this.msg.payload.diem) ? this.msg.payload : null; },\n    soDiem() { return this.d ? this.d.diem.length : 0; },\n    tu() { return this.d ? this.d.tu : Date.now() - 1800000; },\n    den() { return this.d ? this.d.den : Date.now(); },\n    yMin() { const v = this.d ? this.d.diem.map(p => p[1]) : []; return Math.floor(Math.min(20, ...v) / 5) * 5; },\n    yMax() { const v = this.d ? this.d.diem.map(p => p[1]) : []; return Math.ceil(Math.max(50, ...v) / 5) * 5; },\n    vachY() { const a = []; for (let v = this.yMin; v <= this.yMax; v += 5) a.push(v); return a; },\n    vachX() {\n      const a = [];\n      const buoc = 5 * 60000;\n      for (let t = Math.ceil(this.tu / buoc) * buoc; t <= this.den; t += buoc) {\n        a.push({ t, nhan: new Date(t).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) });\n      }\n      return a;\n    },\n    duong() { return this.d.diem.map(p => this.x(p[0]).toFixed(1) + ',' + this.y(p[1]).toFixed(1)).join(' '); },\n    diemCuoi() { return this.soDiem ? this.d.diem[this.soDiem - 1] : null; }\n  },\n  watch: {\n    msg(m) { if (m && m.payload && m.payload.phong) this.phong = m.payload.phong; }\n  },\n  methods: {\n    x(t) { return this.L + (t - this.tu) / Math.max(1, this.den - this.tu) * (this.R - this.L); },\n    y(v) { return this.B - (v - this.yMin) / Math.max(1, this.yMax - this.yMin) * (this.B - this.T); },\n    chon() { this.send({ payload: this.phong, muc: 'chon_phong' }); }\n  }\n}\n</script>\n\n<style scoped>\n.bd { width: 100%; font-family: system-ui, sans-serif; }\n.hang { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 6px; }\nselect { margin-left: 6px; padding: 4px 8px; font-size: 15px; border: 1px solid #90a4ae; border-radius: 4px; background: #fff; }\n.ghi { color: #607d8b; font-size: 13px; }\n.khung { width: 100%; height: auto; }\n.luoi { stroke: #eceff1; }\n.chu { fill: #607d8b; font-size: 12px; }\n.nguong { stroke-width: 1.5; stroke-dasharray: 6 4; }\n.nguong.bat { stroke: #c62828; }\n.nguong.tat { stroke: #f9a825; }\n.nguong.cy { stroke: #8d6e00; stroke-dasharray: 2 4; }\n.duong { fill: none; stroke: #1565c0; stroke-width: 2; }\n.cham { fill: #1565c0; }\n.gia-tri { fill: #0d47a1; font-size: 13px; font-weight: 600; }\n</style>\n",
+    "storeOutMessages": true,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1300,
+    "y": 240,
+    "wires": [
+      [
+        "cbc_ls_fn_tvbd"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_inject_dd",
+    "type": "inject",
+    "z": "cbc_tab_ls",
+    "name": "Mỗi giờ",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3600",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "5",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 380,
+    "wires": [
+      [
+        "cbc_ls_fn_dd"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_dd",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Xóa do_nhiet > 24 h, nhật ký > 90 ngày",
+    "func": "\n// Giữ 24 giờ nhiệt độ cho biểu đồ, 90 ngày nhật ký trạng thái; bảng su_kien giữ vĩnh viễn\nreturn [[{ topic: 'DELETE FROM do_nhiet WHERE thoi_gian < $1', payload: [Date.now() - 24 * 3600 * 1000], muc: 'don_dep' },\n         { topic: 'DELETE FROM nhat_ky WHERE thoi_gian < $1', payload: [Date.now() - 90 * 24 * 3600 * 1000], muc: 'don_dep' }]];\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 380,
+    "wires": [
+      [
+        "cbc_ls_sqlite"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_link_nk",
+    "type": "link in",
+    "z": "cbc_tab_ls",
+    "name": "từ BangDieuKhien: nhật ký",
+    "links": [
+      "cbc_bdk_link_nk"
+    ],
+    "x": 150,
+    "y": 880,
+    "wires": [
+      [
+        "cbc_ls_sqlite"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_inject_nk",
+    "type": "inject",
+    "z": "cbc_tab_ls",
+    "name": "Mỗi 5 s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "5",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 920,
+    "wires": [
+      [
+        "cbc_ls_fn_nk"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_nk",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Truy vấn nhật ký (lọc)",
+    "func": "\n// MR-16: bảng nhật ký trang Lịch sử. Bộ lọc nhận từ khung nhật ký; tự làm mới mỗi 5 s với bộ lọc đang chọn.\nif (msg.muc === 'loc_nk' && msg.payload && typeof msg.payload === 'object') flow.set('locNhatKy', msg.payload);\nconst loc = flow.get('locNhatKy') || { phong: '', ngay: '', loai: '' };\nconst dk = [], ts = [];\nif (loc.phong) { ts.push(loc.phong); dk.push(`ma_phong = $${ts.length}`); }\nif (loc.loai) { ts.push(loc.loai); dk.push(`loai = $${ts.length}`); }\nif (loc.ngay) {                                   // ngày theo giờ Việt Nam\n    const dau = new Date(loc.ngay + 'T00:00:00+07:00').getTime();\n    ts.push(dau); dk.push(`thoi_gian >= $${ts.length}`);\n    ts.push(dau + 24 * 3600 * 1000); dk.push(`thoi_gian < $${ts.length}`);\n}\nreturn { topic: 'SELECT id, thoi_gian, ma_phong, ma_thiet_bi, loai, tu, den, nhiet_do, ghi_chu FROM nhat_ky' +\n                (dk.length ? ' WHERE ' + dk.join(' AND ') : '') + ' ORDER BY thoi_gian DESC, id DESC LIMIT 300',\n         payload: ts, muc: 'nk_bang', loc };\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 920,
+    "wires": [
+      [
+        "cbc_ls_sqlite"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_nkdd",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Định dạng nhật ký",
+    "func": "\nreturn { payload: { dong: msg.payload || [], loc: msg.loc } };\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1080,
+    "y": 420,
+    "wires": [
+      [
+        "cbc_ls_tpl_nk"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_tpl_nk",
+    "type": "ui-template",
+    "z": "cbc_tab_ls",
+    "group": "cbc_grp_nk",
+    "page": "",
+    "ui": "",
+    "name": "Nhật ký trạng thái (MR-16)",
+    "order": 1,
+    "width": "0",
+    "height": "0",
+    "head": "",
+    "format": "<template>\n  <div class=\"nk\">\n    <div class=\"loc\">\n      <label>Phòng\n        <select v-model=\"phong\" @change=\"loc\">\n          <option value=\"\">Tất cả</option>\n          <option v-for=\"p in dsPhong\" :key=\"p\" :value=\"p\">{{ p }}</option>\n        </select>\n      </label>\n      <label>Ngày <input type=\"date\" v-model=\"ngay\" @change=\"loc\" /></label>\n      <label>Loại\n        <select v-model=\"loai\" @change=\"loc\">\n          <option value=\"\">Tất cả</option>\n          <option value=\"trang_thai\">Trạng thái</option><option value=\"dien\">Điện</option>\n          <option value=\"tat_tieng\">Tắt tiếng</option><option value=\"khoi_dong_lai\">Khởi động lại</option>\n          <option value=\"xac_nhan\">Xác nhận</option>\n        </select>\n      </label>\n      <button class=\"nut\" @click=\"homNay\">Hôm nay</button>\n      <span class=\"ghi\">{{ ds.length }} dòng{{ ds.length >= 300 ? ' (300 mới nhất)' : '' }}</span>\n    </div>\n    <table v-if=\"ds.length\">\n      <thead><tr><th>Lúc</th><th>Phòng</th><th>Loại</th><th>Thay đổi</th><th>Nhiệt độ</th><th>Ghi chú</th></tr></thead>\n      <tbody>\n        <tr v-for=\"r in ds\" :key=\"r.id\">\n          <td>{{ ngayGio(r.thoi_gian) }}</td>\n          <td class=\"ma\">{{ r.ma_phong || ('tầng ' + r.ma_thiet_bi) }}</td>\n          <td><span :class=\"['nk-loai', r.loai]\">{{ tenLoai(r.loai) }}</span></td>\n          <td><template v-if=\"r.tu || r.den\"><span :class=\"['tt-chip', lopTT(r.tu)]\">{{ r.tu }}</span> → <span :class=\"['tt-chip', lopTT(r.den)]\">{{ r.den }}</span></template></td>\n          <td>{{ r.nhiet_do === null ? '' : r.nhiet_do.toFixed(1) + ' °C' }}</td>\n          <td>{{ r.ghi_chu }}</td>\n        </tr>\n      </tbody>\n    </table>\n    <div v-else class=\"trong\">Không có thay đổi nào khớp bộ lọc.</div>\n  </div>\n</template>\n\n<script>\nexport default {\n  data() { return { phong: '', ngay: '', loai: '', dsPhong: [\"101\", \"102\", \"103\", \"104\", \"105\", \"106\", \"107\", \"108\", \"109\", \"110\", \"111\", \"112\", \"113\", \"114\", \"115\", \"116\", \"117\", \"118\", \"119\", \"120\"] }; },\n  computed: {\n    ds() { return (this.msg && this.msg.payload && Array.isArray(this.msg.payload.dong)) ? this.msg.payload.dong : []; }\n  },\n  watch: {\n    msg(m) { if (m && m.payload && m.payload.loc) { const l = m.payload.loc; this.phong = l.phong || ''; this.ngay = l.ngay || ''; this.loai = l.loai || ''; } }\n  },\n  methods: {\n    loc() { this.send({ muc: 'loc_nk', payload: { phong: this.phong, ngay: this.ngay, loai: this.loai } }); },\n    homNay() {\n      const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());\n      this.ngay = d.toISOString().slice(0, 10); this.loc();\n    },\n    lopTT(t) { return { 'BÌNH THƯỜNG': 'bt', 'CHÚ Ý': 'cy', 'BÁO ĐỘNG': 'bd', 'NGUY HIỂM': 'nh', 'LỖI CẢM BIẾN': 'loi', 'MẤT KẾT NỐI': 'mat' }[t] || ''; },\n    tenLoai(l) { return { trang_thai: 'Trạng thái', dien: 'Điện', tat_tieng: 'Tắt tiếng', khoi_dong_lai: 'Khởi động lại', xac_nhan: 'Xác nhận' }[l] || l; },\n    ngayGio(ms) { return new Date(ms).toLocaleString('vi-VN', { hour12: false, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }); }\n  }\n}\n</script>\n\n<style scoped>\n.nk { width: 100%; font-family: system-ui, sans-serif; overflow-x: auto; }\n.loc { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 8px; font-size: 14px; }\nselect, input { margin-left: 6px; padding: 4px 8px; font-size: 14px; border: 1px solid #90a4ae; border-radius: 4px; background: #fff; }\n.nut { padding: 4px 10px; border: 1px solid #90a4ae; background: #fff; border-radius: 4px; cursor: pointer; }\n.ghi { color: #607d8b; font-size: 13px; }\ntable { width: 100%; border-collapse: collapse; font-size: 13px; }\nth { text-align: left; color: #455a64; border-bottom: 2px solid #cfd8dc; padding: 5px 8px; }\ntd { border-bottom: 1px solid #eceff1; padding: 5px 8px; }\n.ma { font-weight: 700; }\n.trong { color: #607d8b; }\n\n.nk-loai { padding: 1px 6px; border-radius: 8px; font-size: 12px; font-weight: 600; background: #eceff1; color: #37474f; white-space: nowrap; }\n.nk-loai.dien { background: #fff3e0; color: #e65100; } .nk-loai.tat_tieng { background: #ede7f6; color: #4527a0; }\n.nk-loai.xac_nhan { background: #e8f5e9; color: #1b5e20; } .nk-loai.khoi_dong_lai { background: #e3f2fd; color: #0d47a1; }\n.tt-chip { font-weight: 700; } .tt-chip.bt { color: #1b5e20; } .tt-chip.cy { color: #8d6e00; } .tt-chip.bd { color: #b71c1c; }\n.tt-chip.nh { color: #fff; background: #7f0000; padding: 0 4px; border-radius: 4px; } .tt-chip.loi { color: #6a1b9a; } .tt-chip.mat { color: #546e7a; }\n</style>\n",
+    "storeOutMessages": true,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1310,
+    "y": 420,
+    "wires": [
+      [
+        "cbc_ls_fn_nk"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_link_ct",
+    "type": "link in",
+    "z": "cbc_tab_ls",
+    "name": "từ BangDieuKhien: chi tiết",
+    "links": [
+      "cbc_bdk_link_ct"
+    ],
+    "x": 150,
+    "y": 560,
+    "wires": [
+      [
+        "cbc_ls_fn_ct"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_inject_ct",
+    "type": "inject",
+    "z": "cbc_tab_ls",
+    "name": "Mỗi 3 s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 600,
+    "wires": [
+      [
+        "cbc_ls_fn_ct"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_ct",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Truy vấn chi tiết",
+    "func": "\n// MR-11: trang Chi tiết phòng. Nhận mã phòng khi bấm trên sơ đồ / nút chuyển phòng; tự làm mới mỗi 3 s.\nif (msg.muc === 'chi_tiet' && typeof msg.payload === 'string') global.set('phongChiTiet', msg.payload);\nconst ma = global.get('phongChiTiet') || '101';\nconst tu = Date.now() - 30 * 60 * 1000;\nreturn { topic: 'SELECT thoi_gian, nhiet_do FROM do_nhiet WHERE ma_phong = $1 AND thoi_gian >= $2 ORDER BY thoi_gian',\n         payload: [ma, tu], muc: 'ct_nhiet', phong: ma, tu };\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 580,
+    "wires": [
+      [
+        "cbc_ls_sqlite"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_ctsk",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Truy vấn sự kiện của phòng",
+    "func": "\nmsg.diem = (msg.payload || []).map(r => [r.thoi_gian, r.nhiet_do]);\nmsg.topic = 'SELECT id, ma_phong, bat_dau, ket_thuc, nhiet_do_max, muc_max, co_khoi, ngat_dien, xac_nhan_boi, xac_nhan_luc FROM su_kien WHERE ma_phong = $1 ORDER BY bat_dau DESC LIMIT 10';\nmsg.payload = [msg.phong];\nmsg.muc = 'ct_sukien';\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1080,
+    "y": 300,
+    "wires": [
+      [
+        "cbc_ls_sqlite"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_ctnk",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Truy vấn nhật ký của phòng",
+    "func": "\nmsg.suKien = msg.payload || [];\nconst st = global.get('trangThaiPhong');\nconst p = st ? st.phong.find(x => x.ma === msg.phong) : null;\nmsg.topic = 'SELECT id, thoi_gian, ma_phong, ma_thiet_bi, loai, tu, den, nhiet_do, ghi_chu FROM nhat_ky ' +\n            'WHERE ma_phong = $1 OR (ma_phong IS NULL AND ma_thiet_bi = $2) ORDER BY thoi_gian DESC, id DESC LIMIT 20';\nmsg.payload = [msg.phong, p ? p.ma_thiet_bi : ''];\nmsg.muc = 'ct_nk';\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1080,
+    "y": 320,
+    "wires": [
+      [
+        "cbc_ls_sqlite"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_ctghep",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Ghép dữ liệu chi tiết",
+    "func": "\nconst st = global.get('trangThaiPhong');\nconst p = st ? st.phong.find(x => x.ma === msg.phong) : null;\nreturn { payload: { phong: msg.phong, tt: p || null, diem: msg.diem || [], tu: msg.tu, den: Date.now(),\n                    suKien: msg.suKien || [], nhatKy: msg.payload || [], dsPhong: st ? st.phong.map(x => x.ma) : [] } };\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1080,
+    "y": 340,
+    "wires": [
+      [
+        "cbc_ls_tpl_ct"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_tpl_ct",
+    "type": "ui-template",
+    "z": "cbc_tab_ls",
+    "group": "cbc_grp_ct",
+    "page": "",
+    "ui": "",
+    "name": "Chi tiết phòng (MR-11)",
+    "order": 1,
+    "width": "0",
+    "height": "0",
+    "head": "",
+    "format": "<template>\n  <div class=\"ct\" v-if=\"d\">\n    <div class=\"thanh\">\n      <button class=\"nut\" @click=\"quayLai\">← Sơ đồ</button>\n      <button class=\"nut\" @click=\"chuyen(-1)\" :disabled=\"!d.dsPhong.length\">‹</button>\n      <select v-model=\"chon\" @change=\"mo(chon)\">\n        <option v-for=\"m in d.dsPhong\" :key=\"m\" :value=\"m\">Phòng {{ m }}</option>\n      </select>\n      <button class=\"nut\" @click=\"chuyen(1)\" :disabled=\"!d.dsPhong.length\">›</button>\n    </div>\n\n    <div :class=\"['dau', lop]\">\n      <div>\n        <div class=\"ten\">Phòng {{ d.phong }}</div>\n        <div class=\"tt\">{{ tt ? tt.trangThai : 'Chưa có dữ liệu' }}</div>\n        <div class=\"ghi\" v-if=\"tt && tt.ghiChu\">{{ tt.ghiChu }}</div>\n      </div>\n      <div class=\"nhiet\">{{ tt && tt.nhietDo !== null ? tt.nhietDo.toFixed(1) + ' °C' : '--' }}</div>\n    </div>\n\n    <div class=\"the-hang\">\n      <div class=\"the\"><span>Cảm biến khói</span><b :class=\"{ xau: tt && tt.khoi }\">{{ tt ? (tt.khoi ? '💨 CÓ KHÓI' : 'Không khói') : '--' }}</b></div>\n      <div class=\"the\"><span>Điện phòng</span><b :class=\"{ xau: tt && tt.ngatDien }\">{{ tt ? (tt.ngatDien ? '🔌 ĐÃ NGẮT' : 'Đang có điện') : '--' }}</b></div>\n      <div class=\"the\"><span>Còi</span><b>{{ tt ? (tt.tatTieng ? '🔕 Đang tắt tiếng' : 'Bình thường') : '--' }}</b></div>\n      <div class=\"the\"><span>Cảm biến nhiệt</span><b :class=\"{ xau: tt && tt.loi }\">{{ tt ? (tt.loi ? '⚠️ Lỗi' : 'Hoạt động') : '--' }}</b></div>\n    </div>\n\n    <div class=\"khoi\">\n      <div class=\"tieu-de\">Nhiệt độ 30 phút gần nhất ({{ d.diem.length }} điểm)</div>\n      <svg viewBox=\"0 0 800 240\" class=\"bd\">\n        <g v-for=\"v in vachY\" :key=\"'y' + v\">\n          <line :x1=\"L\" :x2=\"R\" :y1=\"y(v)\" :y2=\"y(v)\" class=\"luoi\" />\n          <text :x=\"L - 6\" :y=\"y(v) + 4\" text-anchor=\"end\" class=\"chu\">{{ v }}</text>\n        </g>\n        <g v-for=\"m in vachX\" :key=\"'x' + m.t\"><text :x=\"x(m.t)\" :y=\"B + 18\" text-anchor=\"middle\" class=\"chu\">{{ m.nhan }}</text></g>\n        <line :x1=\"L\" :x2=\"R\" :y1=\"y(45)\" :y2=\"y(45)\" class=\"ng bat\" />\n        <line :x1=\"L\" :x2=\"R\" :y1=\"y(40)\" :y2=\"y(40)\" class=\"ng tat\" />\n        <line :x1=\"L\" :x2=\"R\" :y1=\"y(38)\" :y2=\"y(38)\" class=\"ng cy\" />\n        <polyline v-if=\"d.diem.length > 1\" :points=\"duong\" class=\"duong\" />\n        <text v-if=\"!d.diem.length\" x=\"400\" y=\"120\" text-anchor=\"middle\" class=\"chu\">Chưa có dữ liệu</text>\n      </svg>\n    </div>\n\n    <div class=\"khoi\">\n      <div class=\"tieu-de\">Các đợt báo động của phòng (10 gần nhất)</div>\n      <table v-if=\"d.suKien.length\">\n        <tr><th>Bắt đầu</th><th>Kết thúc</th><th>Cao nhất</th><th>Cấp</th><th>Khói</th><th>Ngắt điện</th><th>Xác nhận</th></tr>\n        <tr v-for=\"r in d.suKien\" :key=\"r.id\" :class=\"{ mo: r.ket_thuc === null }\">\n          <td>{{ ngayGio(r.bat_dau) }}</td>\n          <td>{{ r.ket_thuc === null ? 'đang báo động' : ngayGio(r.ket_thuc) }}</td>\n          <td>{{ r.nhiet_do_max === null ? '--' : r.nhiet_do_max.toFixed(1) + ' °C' }}</td>\n          <td>{{ (r.muc_max || 2) >= 3 ? 'NGUY HIỂM' : 'BÁO ĐỘNG' }}</td>\n          <td>{{ r.co_khoi ? '💨' : '-' }}</td><td>{{ r.ngat_dien ? '🔌' : '-' }}</td>\n          <td>{{ r.xac_nhan_boi || (r.ket_thuc === null ? 'chưa' : '-') }}</td>\n        </tr>\n      </table>\n      <div v-else class=\"chu-xam\">Phòng này chưa có đợt báo động nào.</div>\n    </div>\n\n    <div class=\"khoi\">\n      <div class=\"tieu-de\">Nhật ký trạng thái (20 thay đổi gần nhất)</div>\n      <table v-if=\"d.nhatKy && d.nhatKy.length\">\n        <tr><th>Lúc</th><th>Loại</th><th>Thay đổi</th><th>Nhiệt độ</th><th>Ghi chú</th></tr>\n        <tr v-for=\"r in d.nhatKy\" :key=\"'nk' + r.id\">\n          <td>{{ ngayGio(r.thoi_gian) }}</td>\n          <td><span :class=\"['nk-loai', r.loai]\">{{ tenLoai(r.loai) }}</span></td>\n          <td><template v-if=\"r.tu || r.den\"><span :class=\"['tt-chip', lopTT(r.tu)]\">{{ r.tu }}</span> → <span :class=\"['tt-chip', lopTT(r.den)]\">{{ r.den }}</span></template></td>\n          <td>{{ r.nhiet_do === null ? '' : r.nhiet_do.toFixed(1) + ' °C' }}</td>\n          <td>{{ r.ma_phong ? (r.ghi_chu || '') : '(cả tầng ' + r.ma_thiet_bi + ') ' + (r.ghi_chu || '') }}</td>\n        </tr>\n      </table>\n      <div v-else class=\"chu-xam\">Chưa có thay đổi nào được ghi.</div>\n    </div>\n\n    <div class=\"khoi thiet-bi\" v-if=\"tt\">\n      <div class=\"tieu-de\">Thiết bị</div>\n      <div>Mã thiết bị: <b>{{ tt.ma_thiet_bi }}</b> · seq: {{ tt.seq === null ? '--' : tt.seq }} · tin mất: {{ tt.tinMat }}</div>\n      <div>Tin cuối: {{ tt.capNhat ? gio(tt.capNhat) : 'chưa có' }}\n        <span v-if=\"tt.lechGio !== null\"> · giờ thiết bị (NTP) lệch {{ tt.lechGio }} s</span>\n        <span v-else> · thiết bị chưa đồng bộ giờ NTP</span></div>\n      <div v-if=\"tt.khoiDongLai\">Khởi động lại lúc {{ gio(tt.khoiDongLai) }}</div>\n    </div>\n  </div>\n  <div v-else class=\"chu-xam\">Chọn một phòng trên sơ đồ mặt bằng để xem chi tiết.</div>\n</template>\n\n<script>\nexport default {\n  data() { return { chon: '', L: 44, R: 780, T: 12, B: 208 }; },\n  computed: {\n    d() { return (this.msg && this.msg.payload && this.msg.payload.phong) ? this.msg.payload : null; },\n    tt() { return this.d ? this.d.tt : null; },\n    lop() {\n      const t = this.tt ? this.tt.trangThai : '';\n      return { 'BÌNH THƯỜNG': 'bt', 'CHÚ Ý': 'cy', 'BÁO ĐỘNG': 'bdg', 'NGUY HIỂM': 'nh', 'LỖI CẢM BIẾN': 'loi', 'MẤT KẾT NỐI': 'mat' }[t] || 'mat';\n    },\n    yMin() { return Math.floor(Math.min(20, ...this.d.diem.map(p => p[1])) / 5) * 5; },\n    yMax() { return Math.ceil(Math.max(50, ...this.d.diem.map(p => p[1])) / 5) * 5; },\n    vachY() { const a = []; for (let v = this.yMin; v <= this.yMax; v += 5) a.push(v); return a; },\n    vachX() {\n      const a = [], buoc = 5 * 60000;\n      for (let t = Math.ceil(this.d.tu / buoc) * buoc; t <= this.d.den; t += buoc)\n        a.push({ t, nhan: new Date(t).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) });\n      return a;\n    },\n    duong() { return this.d.diem.map(p => this.x(p[0]).toFixed(1) + ',' + this.y(p[1]).toFixed(1)).join(' '); }\n  },\n  watch: { d(v) { if (v) this.chon = v.phong; } },\n  methods: {\n    x(t) { return this.L + (t - this.d.tu) / Math.max(1, this.d.den - this.d.tu) * (this.R - this.L); },\n    y(v) { return this.B - (v - this.yMin) / Math.max(1, this.yMax - this.yMin) * (this.B - this.T); },\n    gio(ms) { return new Date(ms).toLocaleTimeString('vi-VN', { hour12: false }); },\n    ngayGio(ms) { return new Date(ms).toLocaleString('vi-VN', { hour12: false, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }); },\n    lopTT(t) { return { 'BÌNH THƯỜNG': 'bt', 'CHÚ Ý': 'cy', 'BÁO ĐỘNG': 'bd', 'NGUY HIỂM': 'nh', 'LỖI CẢM BIẾN': 'loi', 'MẤT KẾT NỐI': 'mat' }[t] || ''; },\n    tenLoai(l) { return { trang_thai: 'Trạng thái', dien: 'Điện', tat_tieng: 'Tắt tiếng', khoi_dong_lai: 'Khởi động lại', xac_nhan: 'Xác nhận' }[l] || l; },\n    mo(ma) { this.send({ payload: ma, muc: 'chi_tiet' }); },\n    chuyen(b) {\n      const ds = this.d.dsPhong, i = ds.indexOf(this.d.phong);\n      this.mo(ds[(i + b + ds.length) % ds.length]);\n    },\n    quayLai() { this.send({ muc: 'quay_lai' }); }\n  }\n}\n</script>\n\n<style scoped>\n.ct { width: 100%; font-family: system-ui, sans-serif; }\n.thanh { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }\n.nut { padding: 6px 12px; border: 1px solid #90a4ae; background: #fff; border-radius: 6px; cursor: pointer; font-size: 15px; }\n.nut:hover { background: #eceff1; }\nselect { padding: 6px 8px; font-size: 15px; border: 1px solid #90a4ae; border-radius: 6px; background: #fff; }\n.dau { display: flex; justify-content: space-between; align-items: center; border-radius: 10px; padding: 14px 18px; border: 3px solid; margin-bottom: 10px; }\n.dau.bt { background: #e8f5e9; border-color: #66bb6a; color: #1b5e20; }\n.dau.cy { background: #fff59d; border-color: #f9a825; color: #6d4c00; }\n.dau.bdg { background: #ffcdd2; border-color: #c62828; color: #b71c1c; }\n.dau.nh { background: #7f0000; border-color: #ff1744; color: #fff; animation: nh .5s infinite; }\n.dau.loi { background: #e1bee7; border-color: #8e24aa; color: #4a148c; }\n.dau.mat { background: #eceff1; border-color: #90a4ae; color: #455a64; }\n@keyframes nh { 50% { background: #d50000; } }\n.ten { font-size: 15px; font-weight: 600; }\n.tt { font-size: 26px; font-weight: 800; }\n.ghi { font-size: 14px; }\n.nhiet { font-size: 44px; font-weight: 800; }\n.the-hang { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }\n@media (max-width: 700px) { .the-hang { grid-template-columns: repeat(2, minmax(0, 1fr)); } }\n.the { background: #fff; border: 1px solid #cfd8dc; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }\n.the span { color: #607d8b; font-size: 12px; }\n.the b.xau { color: #b71c1c; }\n.khoi { background: #fff; border: 1px solid #cfd8dc; border-radius: 8px; padding: 10px; margin-bottom: 10px; overflow-x: auto; }\n.tieu-de { font-weight: 700; color: #37474f; margin-bottom: 6px; }\n.bd { width: 100%; height: auto; }\n.luoi { stroke: #eceff1; } .chu { fill: #607d8b; font-size: 12px; }\n.ng { stroke-width: 1.5; stroke-dasharray: 6 4; } .ng.bat { stroke: #c62828; } .ng.tat { stroke: #f9a825; } .ng.cy { stroke: #8d6e00; stroke-dasharray: 2 4; }\n.duong { fill: none; stroke: #1565c0; stroke-width: 2; }\ntable { width: 100%; border-collapse: collapse; font-size: 13px; }\nth { text-align: left; color: #455a64; border-bottom: 2px solid #cfd8dc; padding: 4px 6px; }\ntd { border-bottom: 1px solid #eceff1; padding: 4px 6px; }\ntr.mo td { background: #ffebee; color: #b71c1c; font-weight: 600; }\n.thiet-bi { font-size: 14px; color: #37474f; line-height: 1.7; }\n.nk-loai { padding: 1px 6px; border-radius: 8px; font-size: 12px; font-weight: 600; background: #eceff1; color: #37474f; white-space: nowrap; }\n.nk-loai.dien { background: #fff3e0; color: #e65100; } .nk-loai.tat_tieng { background: #ede7f6; color: #4527a0; }\n.nk-loai.xac_nhan { background: #e8f5e9; color: #1b5e20; } .nk-loai.khoi_dong_lai { background: #e3f2fd; color: #0d47a1; }\n.tt-chip { font-weight: 700; } .tt-chip.bt { color: #1b5e20; } .tt-chip.cy { color: #8d6e00; } .tt-chip.bd { color: #b71c1c; }\n.tt-chip.nh { color: #fff; background: #7f0000; padding: 0 4px; border-radius: 4px; } .tt-chip.loi { color: #6a1b9a; } .tt-chip.mat { color: #546e7a; }\n\n.chu-xam { color: #607d8b; }\n</style>\n",
+    "storeOutMessages": true,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1310,
+    "y": 340,
+    "wires": [
+      [
+        "cbc_ls_fn_dh"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_dh",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Điều hướng chi tiết",
+    "func": "\n// Nút trên trang Chi tiết phòng: quay lại sơ đồ (chỉ trình duyệt bấm) hoặc chuyển sang phòng khác\nif (msg.muc === 'quay_lai') return [{ payload: { page: 'Bảng điều khiển' }, _client: msg._client }, null];\nif (msg.muc === 'chi_tiet') return [null, msg];\nreturn null;\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1310,
+    "y": 400,
+    "wires": [
+      [
+        "cbc_ls_ctrl"
+      ],
+      [
+        "cbc_ls_fn_ct"
+      ]
+    ],
+    "outputLabels": [
+      "quay lại",
+      "đổi phòng"
+    ]
+  },
+  {
+    "id": "cbc_ls_ctrl",
+    "type": "ui-control",
+    "z": "cbc_tab_ls",
+    "name": "Đổi trang",
+    "ui": "cbc_ui_base",
+    "events": "all",
+    "x": 1520,
+    "y": 400,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cbc_ls_link_tg",
+    "type": "link in",
+    "z": "cbc_tab_ls",
+    "name": "từ BangDieuKhien: Telegram",
+    "links": [
+      "cbc_bdk_link_tg"
+    ],
+    "x": 150,
+    "y": 680,
+    "wires": [
+      [
+        "cbc_ls_fn_tg"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_tg",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Soạn tin Telegram (DB-10)",
+    "func": "\n// DB-10 + MR-13: đặt TELEGRAM_TOKEN, TELEGRAM_CHAT_ID (và tuỳ chọn TELEGRAM_CHAT_ID_2 để\n// leo thang) trong Environment của tab LichSu (double-click tab > Environment). Trống thì không gửi.\n// KHÔNG ghi token vào file flow khi nộp bài / đưa lên GitHub.\nconst API = env.get('TELEGRAM_API') || 'https://api.telegram.org';\nconst token = env.get('TELEGRAM_TOKEN');\nconst chatId = env.get('TELEGRAM_CHAT_ID');\nif (!token || !chatId) {\n    node.status({ fill: 'grey', shape: 'ring', text: 'chưa cấu hình Telegram' });\n    return null;\n}\nconst x = msg.payload || {};\nconst now = Date.now();\nconst khoa = x.ma_phong + '|' + x.loai;\nconst lanGui = context.get('lanGui') || {};\nif (lanGui[khoa] && now - lanGui[khoa] < 60 * 1000) return null;   // tối đa 1 tin / 60 s mỗi loại\nlanGui[khoa] = now;\ncontext.set('lanGui', lanGui);\n\nif (!x.batDau) {                                       // tin từ BangDieuKhien không có thời điểm bắt đầu đợt\n    const dot = (flow.get('dotMo') || {})[x.ma_phong];\n    x.batDau = dot ? dot.batDau : 0;\n}\nconst gio = ms => new Date(ms).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh' });\nconst nhiet = v => (typeof v === 'number') ? v.toFixed(1) + ' °C' : 'không rõ (lỗi cảm biến)';\nconst them = (x.khoi ? '\\n💨 Cảm biến khói: CÓ KHÓI' : '') + (x.ngat_dien ? '\\n🔌 Đã tự ngắt điện phòng' : '');\nlet text, coNut = true;\nif (x.loai === 'nguy_hiem') {\n    text = `🚨🔥 NGUY HIỂM phòng ${x.ma_phong} lúc ${gio(x.luc || now)}: có khói và nhiệt độ cao (${nhiet(x.nhiet_do)}).${them}\\nGọi 114 nếu xác nhận có cháy!`;\n} else if (x.loai === 'bao_dong') {\n    text = `🔥 BÁO ĐỘNG phòng ${x.ma_phong} lúc ${gio(x.luc || now)}, nhiệt độ ${nhiet(x.nhiet_do)}.${them}`;\n} else if (x.loai === 'mat_ket_noi_khi_bao_dong') {\n    text = `⚠️ Phòng ${x.ma_phong} MẤT KẾT NỐI khi đang báo động (${gio(x.luc || now)}). Hãy kiểm tra trực tiếp!`;\n} else if (x.loai === 'het_bao_dong') {\n    const phut = x.batDau ? Math.round((now - x.batDau) / 60000) : '?';\n    text = `✅ Phòng ${x.ma_phong} hết báo động lúc ${gio(x.luc || now)} (kéo dài ~${phut} phút, cao nhất ${nhiet(x.tmax)}).` +\n           (x.ngat_dien ? '\\n🔌 Điện phòng vẫn đang ngắt: kiểm tra xong giữ nút TẮT TIẾNG 3 s để cấp lại.' : '');\n    coNut = false;\n    const cho = flow.get('tgCho') || {};             // hết đợt thì thôi leo thang\n    for (const k of Object.keys(cho)) if (cho[k].ma === x.ma_phong) delete cho[k];\n    flow.set('tgCho', cho);\n} else {\n    return null;\n}\nmsg.method = 'POST';\nmsg.url = `${API}/bot${token}/sendMessage`;\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = { chat_id: chatId, text };\nif (coNut) msg.payload.reply_markup = { inline_keyboard: [[{ text: '✅ Đã xử lý', callback_data: `xn|${x.ma_phong}|${x.batDau}` }]] };\nmsg.tg = { loai: 'gui', ma: x.ma_phong, batDau: x.batDau, chatId, text, coNut };\nnode.status({ fill: 'green', shape: 'dot', text: 'gửi ' + x.loai + ' ' + gio(now) });\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 680,
+    "wires": [
+      [
+        "cbc_ls_http_tg"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_inject_poll",
+    "type": "inject",
+    "z": "cbc_tab_ls",
+    "name": "Mỗi 3 s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "4",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 740,
+    "wires": [
+      [
+        "cbc_ls_fn_poll"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_poll",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Hỏi nút bấm / lệnh (getUpdates)",
+    "func": "\n// MR-13: hỏi Telegram có bấm nút / lệnh mới không (getUpdates, không cần IP công khai)\nconst API = env.get('TELEGRAM_API') || 'https://api.telegram.org';\nconst token = env.get('TELEGRAM_TOKEN');\nif (!token || !env.get('TELEGRAM_CHAT_ID')) return null;\nconst dang = flow.get('tgDangHoi') || 0;\nif (Date.now() - dang < 20000) return null;          // lần hỏi trước chưa trả lời\nflow.set('tgDangHoi', Date.now());\nconst offset = flow.get('tgOffset') || 0;\nconst loc = encodeURIComponent(JSON.stringify(['message', 'callback_query']));\nreturn { method: 'GET', url: `${API}/bot${token}/getUpdates?offset=${offset}&timeout=0&allowed_updates=${loc}`,\n         payload: '', headers: {}, tg: { loai: 'hoi' } };\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 740,
+    "wires": [
+      [
+        "cbc_ls_http_tg"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_inject_lt",
+    "type": "inject",
+    "z": "cbc_tab_ls",
+    "name": "Mỗi 10 s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "10",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "10",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 800,
+    "wires": [
+      [
+        "cbc_ls_fn_lt"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_lt",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Leo thang sau 120 s (MR-14)",
+    "func": "\n// MR-14: sau 120 s chưa ai bấm \"Đã xử lý\" thì gửi cho người thứ hai (TELEGRAM_CHAT_ID_2);\n// không có người thứ hai thì nhắc lại trong nhóm chính. Mỗi sự cố leo thang 1 lần.\nconst LEO_THANG_S = 120;\nconst API = env.get('TELEGRAM_API') || 'https://api.telegram.org';\nconst token = env.get('TELEGRAM_TOKEN');\nconst chat1 = env.get('TELEGRAM_CHAT_ID');\nif (!token || !chat1) return null;\nconst chat2 = env.get('TELEGRAM_CHAT_ID_2') || '';\nconst cho = flow.get('tgCho') || {};\nconst now = Date.now();\nconst ra = [];\nfor (const [k, e] of Object.entries(cho)) {\n    if (e.leoThang || now - e.luc < LEO_THANG_S * 1000) continue;\n    e.leoThang = true;\n    const den = chat2 || chat1;\n    const text = (chat2 ? '⏫ LEO THANG: ' : '⏰ NHẮC LẠI: ') + `chưa ai xác nhận sau ${LEO_THANG_S / 60} phút!\\n\\n` + e.tin[0].text;\n    ra.push({ method: 'POST', url: `${API}/bot${token}/sendMessage`, headers: { 'Content-Type': 'application/json' },\n              payload: { chat_id: den, text, reply_markup: { inline_keyboard: [[{ text: '✅ Đã xử lý', callback_data: 'xn|' + k }]] } },\n              tg: { loai: 'leo_thang', khoa: k, chatId: den, text } });\n}\nflow.set('tgCho', cho);\nif (ra.length) node.status({ fill: 'red', shape: 'dot', text: 'leo thang ' + ra.length + ' sự cố' });\nreturn ra.length ? [ra] : null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 800,
+    "wires": [
+      [
+        "cbc_ls_http_tg"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_http_tg",
+    "type": "http request",
+    "z": "cbc_tab_ls",
+    "name": "Telegram API",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 660,
+    "y": 740,
+    "wires": [
+      [
+        "cbc_ls_fn_tgkq"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_tgkq",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Xử lý phản hồi / xác nhận",
+    "func": "\n// Xử lý mọi phản hồi từ Telegram API. Ra 1: thêm yêu cầu gửi Telegram; ra 2: câu lệnh SQLite.\nconst API = env.get('TELEGRAM_API') || 'https://api.telegram.org';\nconst token = env.get('TELEGRAM_TOKEN');\nconst DUOC_PHEP = [env.get('TELEGRAM_CHAT_ID'), env.get('TELEGRAM_CHAT_ID_2')].filter(Boolean).map(String);\nconst tg = msg.tg || {};\nconst kq = (msg.payload && typeof msg.payload === 'object') ? msg.payload : { ok: false, description: String(msg.payload) };\nconst gio = ms => new Date(ms).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh' });\nconst goi = (phuongThuc, body) => ({ method: 'POST', url: `${API}/bot${token}/${phuongThuc}`,\n                                     headers: { 'Content-Type': 'application/json' }, payload: body, tg: { loai: phuongThuc } });\nconst cho = flow.get('tgCho') || {};\nconst guiDi = [], sql = [];\n\nif (tg.loai === 'hoi') flow.set('tgDangHoi', 0);\nif (!kq.ok) {\n    if (tg.loai !== 'answerCallbackQuery') node.warn('Telegram ' + (tg.loai || '') + ' lỗi: ' + (kq.description || msg.statusCode));\n    node.status({ fill: 'red', shape: 'ring', text: 'lỗi ' + (tg.loai || '') + ' ' + gio(Date.now()) });\n    return null;\n}\n\nif (tg.loai === 'gui' && tg.coNut && kq.result) {             // nhớ tin để leo thang / sửa khi xác nhận\n    const k = tg.ma + '|' + tg.batDau;\n    const tin = { chatId: tg.chatId, messageId: kq.result.message_id, text: tg.text };\n    if (cho[k]) cho[k].tin.push(tin);\n    else cho[k] = { ma: tg.ma, batDau: tg.batDau, luc: Date.now(), leoThang: false, tin: [tin] };\n} else if (tg.loai === 'leo_thang' && kq.result && cho[tg.khoa]) {\n    cho[tg.khoa].tin.push({ chatId: tg.chatId, messageId: kq.result.message_id, text: tg.text });\n} else if (tg.loai === 'hoi') {\n    let offset = flow.get('tgOffset') || 0;\n    for (const u of (kq.result || [])) {\n        offset = Math.max(offset, u.update_id + 1);\n        const cq = u.callback_query;\n        if (cq) {\n            const chat = String(cq.message && cq.message.chat ? cq.message.chat.id : '');\n            if (!DUOC_PHEP.includes(chat)) {\n                guiDi.push(goi('answerCallbackQuery', { callback_query_id: cq.id, text: 'Bạn không có quyền xác nhận.' }));\n                continue;\n            }\n            const [lenh, ma, batDau] = String(cq.data || '').split('|');\n            if (lenh !== 'xn') continue;\n            const ai = [cq.from.first_name, cq.from.last_name].filter(Boolean).join(' ') + (cq.from.username ? ' (@' + cq.from.username + ')' : '');\n            const now = Date.now();\n            const k = ma + '|' + batDau;\n            const e = cho[k];\n            if (!e) {\n                guiDi.push(goi('answerCallbackQuery', { callback_query_id: cq.id, text: 'Sự cố này đã được xác nhận hoặc đã kết thúc.' }));\n                guiDi.push(goi('editMessageReplyMarkup', { chat_id: cq.message.chat.id, message_id: cq.message.message_id, reply_markup: { inline_keyboard: [] } }));\n                continue;\n            }\n            delete cho[k];\n            guiDi.push(goi('answerCallbackQuery', { callback_query_id: cq.id, text: 'Đã ghi nhận. Cảm ơn!' }));\n            for (const t of e.tin) {                        // sửa mọi tin của sự cố này (kể cả tin leo thang)\n                guiDi.push(goi('editMessageText', { chat_id: t.chatId, message_id: t.messageId,\n                                                    text: t.text + `\\n\\n✅ Đã xử lý: ${ai} lúc ${gio(now)}` }));\n            }\n            sql.push({ topic: 'UPDATE su_kien SET xac_nhan_boi = $1, xac_nhan_luc = $2 WHERE ma_phong = $3 AND bat_dau = $4 AND xac_nhan_boi IS NULL',\n                       payload: [ai, now, ma, Number(batDau)], muc: 'su_kien' });\n            sql.push({ topic: 'INSERT INTO nhat_ky (thoi_gian, ma_phong, ma_thiet_bi, loai, tu, den, nhiet_do, ghi_chu) VALUES ($1, $2, NULL, $3, NULL, NULL, NULL, $4)',\n                       payload: [now, ma, 'xac_nhan', 'Telegram: ' + ai + ' bấm Đã xử lý'], muc: 'nk_ghi' });\n            node.status({ fill: 'green', shape: 'dot', text: `phòng ${ma} xác nhận bởi ${ai}` });\n            continue;\n        }\n        const m = u.message;\n        if (!m || typeof m.text !== 'string') continue;\n        const chat = String(m.chat.id);\n        if (!DUOC_PHEP.includes(chat)) { node.warn('Bỏ qua lệnh từ chat không có quyền: ' + chat); continue; }\n        const lenh = m.text.trim().split(/[\\s@]/)[0].toLowerCase();\n        if (lenh === '/trangthai') {\n            const st = global.get('trangThaiPhong');\n            let text;\n            if (!st) text = 'Chưa có dữ liệu.';\n            else {\n                const t = st.tongHop;\n                const nang = st.phong.filter(p => p.trangThai !== 'BÌNH THƯỜNG')\n                    .map(p => `• ${p.ma}: ${p.trangThai}` + (p.nhietDo !== null ? ` (${p.nhietDo.toFixed(1)} °C)` : '') +\n                              (p.khoi ? ' 💨' : '') + (p.ngatDien ? ' 🔌' : '') + (p.tatTieng ? ' 🔕' : ''));\n                text = `📋 Trạng thái lúc ${gio(st.luc)}\\nNguy hiểm ${t.nguyHiem} · Báo động ${t.baoDong} · Chú ý ${t.chuY} · ` +\n                       `Lỗi ${t.loi} · Mất kết nối ${t.matKetNoi} · Bình thường ${t.binhThuong}` +\n                       (nang.length ? '\\n\\n' + nang.join('\\n') : '\\n\\nTất cả phòng bình thường ✅');\n            }\n            guiDi.push(goi('sendMessage', { chat_id: m.chat.id, text }));\n        } else if (lenh === '/lichsu') {\n            sql.push({ topic: 'SELECT ma_phong, bat_dau, ket_thuc, nhiet_do_max, muc_max, xac_nhan_boi FROM su_kien ORDER BY bat_dau DESC LIMIT 5',\n                       payload: [], muc: 'tg_lichsu', chatId: m.chat.id });\n        } else if (lenh.startsWith('/')) {\n            guiDi.push(goi('sendMessage', { chat_id: m.chat.id,\n                text: 'Lệnh hỗ trợ:\\n/trangthai - tình trạng 20 phòng\\n/lichsu - 5 đợt báo động gần nhất\\nKhi có báo động, bấm \"✅ Đã xử lý\" dưới tin để xác nhận.' }));\n        }\n    }\n    flow.set('tgOffset', offset);\n}\nflow.set('tgCho', cho);\nreturn [guiDi.length ? guiDi : null, sql.length ? sql : null];\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 900,
+    "y": 740,
+    "wires": [
+      [
+        "cbc_ls_http_tg"
+      ],
+      [
+        "cbc_ls_sqlite"
+      ]
+    ],
+    "outputLabels": [
+      "gửi tiếp Telegram",
+      "SQLite"
+    ]
+  },
+  {
+    "id": "cbc_ls_fn_tgls",
+    "type": "function",
+    "z": "cbc_tab_ls",
+    "name": "Trả lời /lichsu",
+    "func": "\n// Trả lời lệnh /lichsu từ kết quả SQLite\nconst API = env.get('TELEGRAM_API') || 'https://api.telegram.org';\nconst token = env.get('TELEGRAM_TOKEN');\nif (!token) return null;\nconst ngay = ms => new Date(ms).toLocaleString('vi-VN', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });\nconst rows = msg.payload || [];\nconst dong = rows.map(r => `• ${r.ma_phong} ${ngay(r.bat_dau)} → ${r.ket_thuc ? ngay(r.ket_thuc) : 'ĐANG báo động'}` +\n    `, max ${r.nhiet_do_max === null ? '--' : r.nhiet_do_max.toFixed(1) + ' °C'}` + ((r.muc_max || 2) >= 3 ? ', NGUY HIỂM' : '') +\n    (r.xac_nhan_boi ? `, xác nhận: ${r.xac_nhan_boi}` : ''));\nreturn { method: 'POST', url: `${API}/bot${token}/sendMessage`, headers: { 'Content-Type': 'application/json' },\n         payload: { chat_id: msg.chatId, text: rows.length ? '🗂 5 đợt báo động gần nhất\\n' + dong.join('\\n') : 'Chưa có đợt báo động nào.' },\n         tg: { loai: 'sendMessage' } };\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1080,
+    "y": 380,
+    "wires": [
+      [
+        "cbc_ls_http_tg"
+      ]
+    ]
+  },
+  {
+    "id": "cbc_broker",
+    "type": "mqtt-broker",
+    "name": "Broker CanhBaoChay",
+    "broker": "broker.emqx.io",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "30",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "cbc_ui_base",
+    "type": "ui-base",
+    "name": "CanhBaoChay",
+    "path": "/dashboard",
+    "includeClientData": true,
+    "acceptsClientConfig": [
+      "ui-notification",
+      "ui-control"
+    ],
+    "showPathInSidebar": false,
+    "navigationStyle": "default",
+    "titleBarStyle": "default"
+  },
+  {
+    "id": "cbc_ui_theme",
+    "type": "ui-theme",
+    "name": "CanhBaoChay",
+    "colors": {
+      "surface": "#263238",
+      "primary": "#c62828",
+      "bgPage": "#eceff1",
+      "groupBg": "#ffffff",
+      "groupOutline": "#cfd8dc"
+    },
+    "sizes": {
+      "density": "default",
+      "pagePadding": "12px",
+      "groupGap": "12px",
+      "groupBorderRadius": "6px",
+      "widgetGap": "12px"
+    }
+  }
+]

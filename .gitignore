@@ -1,0 +1,16 @@
+# Dữ liệu chạy máy, không đưa lên Git
+canhbaochay.db
+*.db-journal
+*.log
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+
+# Thư mục build tạm của arduino-cli (firmware dùng cho Wokwi nằm ở wokwi/espXX/build và CÓ đưa lên)
+canhbaochay_esp32/build/
+
+# Bí mật: nếu bạn lỡ tạo file chứa token / mật khẩu thì đặt tên theo mẫu này
+*.secret
+.env

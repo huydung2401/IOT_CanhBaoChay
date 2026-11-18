@@ -1,0 +1,9 @@
+{
+  "auto-run-command.rules": [
+    {
+      "condition": "hasFile: wokwi.toml",
+      "command": "wokwi-vscode.start",
+      "message": "CanhBaoChay: dang chay mo phong Wokwi..."
+    }
+  ]
+}
