@@ -194,6 +194,20 @@ try:
     check(rows and all('102' in r for r in rows), f'loc phong 102: {len(rows)} dong, deu la 102')
     page.locator('.nk select').first.select_option(''); time.sleep(1)
 
+    print('Mo phong cham (Wokwi 15%) khong bao mat ket noi oan')
+    cmd('toc esp01 15'); wait(75, 'esp01 chay 15% toc do')
+    mats = []
+    for _ in range(6):
+        c = so_do(page); mats.append(sum(1 for m in c if m.startswith('10') or m == '110' if 'MẤT KẾT NỐI' in c[m]['text'])); time.sleep(3)
+    check(max(mats) == 0, f'esp01 o 15%: khong phong nao MAT KET NOI (cac lan: {mats})')
+    check('mô phỏng ~' in page.inner_text('body'), 'tieu de tang hien uoc tinh toc do mo phong')
+    m = __import__('re').search(r'Tầng 1 \(esp01\)\s*· mô phỏng ~(\d+)%', page.inner_text('body'))
+    check(m and 8 <= int(m.group(1)) <= 40, f'uoc tinh toc do esp01 (that 15%, uoc luong tre vai chu ky): {m.group(1) if m else None}%')
+    cmd('dung esp01'); wait(19, 'esp01 mat mang that')
+    c = so_do(page)
+    check(all('MẤT KẾT NỐI' in c[m]['text'] for m in c if m.startswith('10') or m == '110'), 'esp01 that su mat mang: ca 10 phong MAT KET NOI sau 15 s')
+    cmd('chay esp01'); cmd('toc esp01 100'); wait(6)
+
     print('LS-03 bang su kien')
     page.goto('http://localhost:1880/dashboard/lichsu'); time.sleep(4)
     txt = page.inner_text('body')

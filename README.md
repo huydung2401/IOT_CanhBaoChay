@@ -60,7 +60,7 @@ Chỉ muốn cập nhật flow mà không mở mô phỏng: double-click `cap_nh
 | `nodered/cap_nhat_flow.js` | Đưa flow vào Node-RED đang chạy qua Admin API (tự cài gói thiếu, giữ cấu hình của bạn) | 2, 3 |
 | `chay_he_thong.bat`, `cap_nhat_node_red.bat` | Bấm một lần để chạy cả hệ thống / chỉ cập nhật flow | – |
 | `kiemthu/test_logic.py` | Kiểm thử logic báo động trên máy tính (53 kiểm tra) | 1 |
-| `kiemthu/e2e_v12.py` | Kiểm thử đầu-cuối Node-RED v1.2 với broker cục bộ và Telegram giả lập (43 kiểm tra) | 2, 3 |
+| `kiemthu/e2e_v12.py` | Kiểm thử đầu-cuối Node-RED v1.2 với broker cục bộ và Telegram giả lập (47 kiểm tra) | 2, 3 |
 | `kiemthu/gia_lap_esp32.js` | Giả lập 2 ESP32 gửi MQTT, để làm dashboard khi chưa có Wokwi | 2, 3 |
 | `GHI_CHU_BAN_GIAO.md` | Cách chia phòng, mô phỏng lỗi, ngắt MQTT, kết quả kiểm thử | 1, 2, 3 |
 | `anh_chup/` | Ảnh dashboard lúc chạy kiểm thử, dùng cho báo cáo | 3 |
@@ -83,7 +83,7 @@ Sau đó chạy `python3 wokwi/tao_wokwi.py` để chép code mới sang hai pro
 4. Bấm Start. Serial Monitor in `[wifi] da ket noi` rồi `[mqtt] da ket noi`.
 5. Bấm vào cảm biến DHT22 để chỉnh nhiệt độ; bấm vào cảm biến khói (MQ-2) kéo thanh ppm lên cao để giả lập có khói; gõ lệnh ở Serial Monitor (bảng bên dưới).
 
-Cảm biến khói cần **20 s làm nóng** sau khi bật, trong thời gian này chỉ lệnh `khoi` có tác dụng. Hết 20 s, Serial in `[khoi] cam bien khoi san sang`; nếu cả 10 phòng cùng báo khói ngay lúc đó, máy coi là lỗi dây/IC 74HC165, in `[khoi] LOI ...` và tạm bỏ qua khói (báo động nhiệt vẫn chạy).
+Cảm biến khói cần **20 s làm nóng** sau khi bật, trong thời gian này chỉ lệnh `khoi` có tác dụng. **Wokwi luôn khởi động cảm biến ở 400 ppm** (đã vượt ngưỡng): mỗi cảm biến chỉ được tính sau khi nó đọc "sạch" một lần, giống hiệu chuẩn MQ-2 trong không khí sạch. Serial in `[khoi] CHUA KICH HOAT: ...`; bấm vào từng cảm biến, **kéo ppm về dưới 3 ppm** để kích hoạt (Serial in `cam bien khoi da kich hoat`). Sau đó **kéo lên trên 10 ppm là báo khói**, kéo về dưới 3 ppm là hết.
 
 Mạch mỗi ESP32 (v1.2): 10 DHT22, 10 MQ-2 → 2 × 74HC165 (PL = D4, CP = D13, Q7 = D35), 4 × 74HC595 (đèn, còi, rơ-le), 10 rơ-le kèm đèn vàng "điện phòng" (sáng = có điện), nút TẮT TIẾNG ở D15, nút MQTT ở D34, còi hành lang ở D2.
 
@@ -161,7 +161,7 @@ node gia_lap_esp32.js                         # gửi lên broker.emqx.io
 node gia_lap_esp32.js mqtt://localhost:1883   # hoặc broker cục bộ
 ```
 
-Gõ `dat 102 47`, `dat 104 39`, `khoi 105`, `tattieng esp01`, `capdien all`, `loi 104`, `dung esp01`, `chay esp01`, `reset esp02`… để tạo các tình huống trên dashboard.
+Gõ `dat 102 47`, `dat 104 39`, `khoi 105`, `tattieng esp01`, `capdien all`, `toc esp01 20` (giả lập Wokwi chạy chậm 20%), `loi 104`, `dung esp01`, `chay esp01`, `reset esp02`… để tạo các tình huống trên dashboard.
 
 ## Kiểm thử logic trên máy tính
 

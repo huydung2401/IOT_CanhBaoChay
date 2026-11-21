@@ -99,7 +99,17 @@ r.khoi = p.khoi === true;
 r.ngat_dien = p.ngat_dien === true;
 r.tat_tieng = p.tat_tieng === true;
 r.ts = (typeof p.ts === 'number' && p.ts > 0) ? p.ts : null;
+// Khoảng cách thật giữa 2 tin của phòng (trung bình trượt). Wokwi chạy chậm (thanh tốc độ
+// 13-22%) thì chu kỳ 5 s của ESP32 thành 25-40 s thời gian thật: dùng để nới ngưỡng mất kết nối.
+if (r.daCoTin) {
+    const d = Math.min(now - r.lanCuoi, 120000);
+    r.khoang = r.khoang ? 0.7 * r.khoang + 0.3 * d : d;
+}
+r.daCoTin = true;
 r.lanCuoi = now;
+const thietBi = flow.get('thietBi') || {};     // lần cuối nghe thấy từng ESP32 (bất kỳ phòng nào)
+thietBi[r.ma_thiet_bi] = { lanCuoi: now };
+flow.set('thietBi', thietBi);
 flow.set('phong', phong);
 return null;
 """
@@ -108,6 +118,11 @@ FN_TINH_TRANG_THAI = r"""
 // Quy tắc hiển thị mục 4.4 + 10.4, xét theo thứ tự, dừng ở điều kiện đúng đầu tiên:
 // MẤT KẾT NỐI > NGUY HIỂM > BÁO ĐỘNG > LỖI CẢM BIẾN > CHÚ Ý > BÌNH THƯỜNG
 const THOI_GIAN_MAT_KET_NOI_S = 15;
+// Mất kết nối = ESP32 im lặng hẳn 15 s (nó gửi 1 tin mỗi 0,5 s thời gian mô phỏng), HOẶC riêng
+// phòng đó quá 3 lần chu kỳ tin đo được của chính nó. Wokwi chậm làm chu kỳ mỗi phòng dài ra,
+// nên ngưỡng phòng tự giãn theo; thiết bị thật sự mất mạng vẫn bị phát hiện sau 15 s.
+const thietBi = flow.get('thietBi') || {};
+const tocDo = {};
 const phong = flow.get('phong');
 if (!phong) return null;
 const now = Date.now();
@@ -118,7 +133,14 @@ const telegram = [];
 
 for (const ma of Object.keys(phong).sort()) {
     const r = phong[ma];
-    const mat = now - r.lanCuoi > THOI_GIAN_MAT_KET_NOI_S * 1000;
+    const tb = thietBi[r.ma_thiet_bi];
+    const nguongPhong = Math.max(THOI_GIAN_MAT_KET_NOI_S * 1000, 3 * (r.khoang || 0));
+    const tbIm = !tb || now - tb.lanCuoi > THOI_GIAN_MAT_KET_NOI_S * 1000;
+    const mat = r.coTin ? (tbIm || now - r.lanCuoi > nguongPhong)
+                        : now - r.lanCuoi > THOI_GIAN_MAT_KET_NOI_S * 1000;
+    if (r.coTin && !tbIm && r.khoang) {
+        (tocDo[r.ma_thiet_bi] = tocDo[r.ma_thiet_bi] || []).push(r.khoang);
+    }
     const loi = r.coTin && (r.loi_cam_bien || r.nhiet_do === null);
     const muc = r.muc || 0;
     let trangThai, vienDo = false, ghiChu = '';
@@ -185,7 +207,13 @@ for (const [tb, bat] of Object.entries(tatTiengTb))  // tắt tiếng là của 
 for (const tb of Object.keys(khoiDongTb)) ghiNk(null, tb, 'khoi_dong_lai', null, null, null, 'thiết bị khởi động lại (seq về 0)');
 context.set('nhatKyTruoc', cu);
 
-const kq = { phong: ds, tongHop: tong, luc: now };
+// Ước tính tốc độ mô phỏng: ESP32 gửi mỗi phòng 5 s (thời gian của nó); đo được bao lâu thật
+const thongTinTb = {};
+for (const [ma, ks] of Object.entries(tocDo)) {
+    const tb = ks.reduce((a, b) => a + b, 0) / ks.length;
+    thongTinTb[ma] = { khoang: Math.round(tb / 1000), tocDo: Math.min(100, Math.round(5000 / tb * 100)) };
+}
+const kq = { phong: ds, tongHop: tong, luc: now, thietBi: thongTinTb };
 global.set('trangThaiPhong', kq);       // cho trang Chi tiết phòng và lệnh Telegram /trangthai
 return [{ payload: kq }, telegram.length ? telegram : null, nk.length ? nk : null];
 """
@@ -210,7 +238,12 @@ TPL_SO_DO = r"""<template>
       <span class="luc">Cập nhật {{ gio(msg.payload.luc) }} · bấm vào phòng để xem chi tiết</span>
     </div>
     <div v-for="tang in cacTang" :key="tang.ten" class="tang">
-      <div class="ten-tang">{{ tang.ten }}</div>
+      <div class="ten-tang">{{ tang.ten }}
+        <span v-if="tang.tocDo !== null" :class="['toc-do', { cham: tang.tocDo < 30 }]"
+              :title="'Mỗi phòng nhận 1 tin khoảng ' + tang.khoang + ' s. ESP32 gửi 5 s/lần theo đồng hồ mô phỏng.'">
+          · mô phỏng ~{{ tang.tocDo }}%{{ tang.tocDo < 30 ? ' (chậm: để cửa sổ Wokwi hiện, đóng bớt ứng dụng)' : '' }}
+        </span>
+      </div>
       <div class="mat-bang">
         <div class="loi-ra trai"><span class="bieu">🚪</span><b>LỐI THOÁT</b><span>🪜 Cầu thang A</span></div>
         <div v-for="p in tang.tren" :key="p.ma" :class="oPhong(p)" @click="mo(p)" :title="'Phòng ' + p.ma + ': ' + p.trangThai">
@@ -250,8 +283,11 @@ export default {
         const phong = ds.slice(k * 10, k * 10 + 10);
         const mucMax = Math.max(0, ...phong.filter(p => !p.cu).map(p => p.muc || 0));
         const tatTieng = phong.some(p => p.tatTieng && !p.cu);
+        const tb = phong[0] ? phong[0].ma_thiet_bi : '';
+        const tt = (this.msg.payload.thietBi || {})[tb];
         tang.push({
-          ten: 'Tầng ' + (k + 1) + ' (' + (phong[0] ? phong[0].ma_thiet_bi : '') + ')',
+          ten: 'Tầng ' + (k + 1) + ' (' + tb + ')',
+          tocDo: tt ? tt.tocDo : null, khoang: tt ? tt.khoang : null,
           tren: phong.slice(0, 5), duoi: phong.slice(5, 10),
           coiChung: tatTieng ? 'còi chung đang tắt tiếng' : (mucMax >= 3 ? 'còi chung KÊU LIÊN TỤC' : mucMax === 2 ? 'còi chung đang kêu' : 'còi chung im')
         });
@@ -288,6 +324,8 @@ export default {
 .luc { margin-left: auto; color: #607d8b; font-size: 13px; }
 .tang { margin-bottom: 14px; }
 .ten-tang { font-weight: 700; color: #37474f; margin-bottom: 4px; }
+.toc-do { font-weight: 400; font-size: 12px; color: #607d8b; }
+.toc-do.cham { color: #e65100; }
 .mat-bang { display: grid; grid-template-columns: 70px repeat(5, minmax(0, 1fr)) 70px;
             grid-template-rows: auto 34px auto; gap: 6px; background: #cfd8dc; padding: 6px; border-radius: 8px; }
 .loi-ra { grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: center; justify-content: center;

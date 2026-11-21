@@ -77,7 +77,9 @@ def tao_diagram(ds_phong):
         for bit, chan in ((2 * i, f"den{ma}:A"), (2 * i + 1, f"coi{ma}:2"), (20 + i, f"rl{ma}:IN")):
             noi(f"sr{bit // 8 + 1}:Q{bit % 8}", chan, XANH)
 
-    # MR-02: cảm biến khói MQ-2 mỗi phòng (chân Wokwi: AOUT, DOUT), DOUT xuống LOW khi khói vượt ngưỡng.
+    # MR-02: cảm biến khói MQ-2 mỗi phòng (chân Wokwi: AOUT, DOUT). DOUT xuống LOW khi khí vượt ngưỡng;
+    # Đo được: <= 3 ppm sạch, >= 10 ppm có khói. Wokwi bỏ qua "ppm" ở đây và luôn bắt đầu ở 400 ppm,
+    # nên firmware chỉ tính một cảm biến sau khi nó đọc sạch một lần (kéo ppm về < 3).
     # 2 IC 74HC165 nối chuỗi: PL <- GPIO4, CP <- GPIO13, Q7 của IC2 -> GPIO35 (chỉ vào).
     # IC1 D0..D7 = phòng thứ 1..8, IC2 D0..D1 = phòng thứ 9..10 (IC2 được đọc trước).
     for k in range(2):
@@ -95,8 +97,10 @@ def tao_diagram(ds_phong):
         noi(f"pi2:D{d}", "esp:3V3", DO)
     for i, ma in enumerate(ds_phong):
         x = x0 + i * buoc
-        part("wokwi-gas-sensor", f"khoi{ma}", x - 10, -330, {"ppm": "100"})
-        noi(f"khoi{ma}:VCC", "esp:VIN", DO)
+        # Wokwi: VIN của ESP32 không được cấp điện -> DOUT kẹt LOW (báo khói cả 10 phòng). Dùng 3V3 và
+        # hạ ngưỡng so sánh theo tỉ lệ 4,4 V x 3,3/5 = 2,9 V.
+        part("wokwi-gas-sensor", f"khoi{ma}", x - 10, -330, {"ppm": "1", "threshold": "2.9"})
+        noi(f"khoi{ma}:VCC", "esp:3V3", DO)
         noi(f"khoi{ma}:GND", "esp:GND.1", DEN)
         noi(f"khoi{ma}:DOUT", f"pi{i // 8 + 1}:D{i % 8}", XANH)
 
@@ -107,7 +111,7 @@ def tao_diagram(ds_phong):
         y = 560 + (i % 2) * 110             # so le 2 hàng cho khỏi chồng nhau
         part("wokwi-relay-module", f"rl{ma}", x - 20, y, {"transistor": "pnp"}, rotate=90)
         part("wokwi-led", f"dien{ma}", x + 40, y + 10, {"color": "yellow", "label": f"điện {ma}"})
-        noi(f"rl{ma}:VCC", "esp:VIN", DO)
+        noi(f"rl{ma}:VCC", "esp:3V3", DO)
         noi(f"rl{ma}:GND", "esp:GND.2", DEN)
         noi(f"rl{ma}:COM", "esp:3V3", DO)
         noi(f"rl{ma}:NC", f"dien{ma}:A", VANG)

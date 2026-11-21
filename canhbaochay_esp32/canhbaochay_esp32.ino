@@ -317,9 +317,17 @@ void docMotPhong(uint8_t i) {
 
 // MR-01: đọc 16 bit từ chuỗi 2 IC 74HC165. IC2 (phòng 9, 10) nối ra ESP32 nên ra trước.
 // Bit đọc thứ k: k < 8 -> IC2 chân D(7-k); k >= 8 -> IC1 chân D(15-k).
-uint16_t khoiThoCuoi = 0;      // 16 bit thô lần đọc gần nhất (1 = chân mức cao = không khói)
-bool     inKhoiTho   = false;  // lệnh "khoiraw": in 16 bit thô mỗi lần đọc
-bool     loiDuongKhoi = false; // tự kiểm tra: cả 10 đầu vào cùng báo khói ngay khi khởi động
+// Mức ở chân DOUT khi CÓ khói: LOW (đúng tài liệu Wokwi và module MQ-2 thật, comparator LM393).
+// Đo trên Wokwi 19/11: 0,6-3 ppm DOUT = HIGH (sạch); 10, 95, 400, 100000 ppm DOUT = LOW (có khói).
+const bool KHOI_KHI_MUC_CAO = false;
+inline bool laKhoi(uint16_t tho, uint8_t k) { return ((tho >> k) & 1u) == (KHOI_KHI_MUC_CAO ? 1u : 0u); }
+uint16_t khoiThoCuoi = 0;      // 16 bit thô lần đọc gần nhất (1 = chân mức cao)
+bool     inKhoiTho   = true;   // in 16 bit thô mỗi khi đổi (lệnh "khoiraw" bật/tắt)
+// Hiệu chuẩn lúc bật (như MQ-2 thật bật trong không khí sạch): một cảm biến chỉ được tính sau khi
+// đã đọc "sạch" ít nhất một lần kể từ khi hết làm nóng. Wokwi luôn khởi động cảm biến ở 400 ppm
+// (đã vượt ngưỡng, khoảng 5-10 ppm) và bỏ qua giá trị ppm đặt trong diagram.json, nên nếu không có
+// bước này cả 10 phòng báo khói ngay khi chạy. Cách kích hoạt: kéo ppm của cảm biến về < 3 ppm.
+bool     khoiSanSang[SO_PHONG];
 
 uint16_t doc165() {
   digitalWrite(CHAN_165_PL, LOW);       // chụp trạng thái 16 chân
@@ -344,7 +352,7 @@ void inKhoi(uint16_t tho) {
   bool co = false;
   for (uint8_t k = 0; k < 16; k++) {
     int i = phongCuaBit(k);
-    if (i >= 0 && i < SO_PHONG && !(tho & (1u << k))) { Serial.printf(" %s", DS_PHONG[i]); co = true; }
+    if (i >= 0 && i < SO_PHONG && laKhoi(tho, k)) { Serial.printf(" %s", DS_PHONG[i]); co = true; }
   }
   Serial.print(co ? "\r\n" : " (khong)\r\n");
 }
@@ -357,32 +365,32 @@ void docKhoi() {
   uint8_t soCo = 0;
   for (uint8_t k = 0; k < 16; k++) {
     int i = phongCuaBit(k);
-    if (i >= 0 && i < SO_PHONG && !(tho & (1u << k))) { coKhoi[i] = true; soCo++; }   // DOUT LOW = có khói
+    if (i >= 0 && i < SO_PHONG && laKhoi(tho, k)) { coKhoi[i] = true; soCo++; }
   }
   uint32_t now = millis();
   static bool daLamNong = false;
-  if (!daLamNong) {
-    if (now < THOI_GIAN_LAM_NONG_MS) {           // MQ-2 đang làm nóng: chỉ nhận lệnh "khoi" giả lập
-      for (uint8_t i = 0; i < SO_PHONG; i++) coKhoi[i] = false;
-      soCo = 0;
-    } else {
-      daLamNong = true;
-      inKhoi(tho);
-      if (soCo == SO_PHONG) {                    // tự kiểm tra: 10/10 phòng cùng có khói lúc khởi động
-        loiDuongKhoi = true;                     // = đứt dây / mất nguồn chuỗi 74HC165, không phải cháy
-        Serial.println("[khoi] LOI: ca 10 dau vao deu bao khoi khi khoi dong -> nghi dut day/mat nguon 74HC165. "
-                       "Tam bo qua cam bien khoi (bao dong nhiet van chay). Kiem tra mach roi reset.");
-      } else {
-        Serial.println("[khoi] cam bien khoi san sang");
+  if (!daLamNong && now < THOI_GIAN_LAM_NONG_MS) {   // MQ-2 đang làm nóng: chỉ nhận lệnh "khoi" giả lập
+    for (uint8_t i = 0; i < SO_PHONG; i++) coKhoi[i] = false;
+  } else {
+    bool lanDau = !daLamNong;
+    daLamNong = true;
+    for (uint8_t i = 0; i < SO_PHONG; i++) {
+      if (!khoiSanSang[i] && !coKhoi[i]) {
+        khoiSanSang[i] = true;
+        if (!lanDau) Serial.printf("[khoi] phong %s: cam bien khoi da kich hoat\r\n", DS_PHONG[i]);
       }
+      if (!khoiSanSang[i]) coKhoi[i] = false;      // chưa từng đọc sạch: chưa tin được, bỏ qua
     }
-  }
-  if (loiDuongKhoi) {
-    if (soCo < SO_PHONG) {                       // đọc được ít nhất 1 phòng sạch: đường đọc đã ổn lại
-      loiDuongKhoi = false;
-      Serial.println("[khoi] duong doc khoi da binh thuong tro lai");
-    } else {
-      for (uint8_t i = 0; i < SO_PHONG; i++) coKhoi[i] = false;
+    if (lanDau) {
+      inKhoi(tho);
+      String chua;
+      for (uint8_t i = 0; i < SO_PHONG; i++) if (!khoiSanSang[i]) { chua += ' '; chua += DS_PHONG[i]; }
+      if (chua.length() == 0) {
+        Serial.println("[khoi] cam bien khoi san sang (ca 10 phong)");
+      } else {
+        Serial.printf("[khoi] CHUA KICH HOAT:%s -> dang bao khi ngay luc bat (Wokwi mac dinh 400 ppm). "
+                      "Keo ppm cam bien do ve < 3 ppm de kich hoat; sau do keo len > 10 ppm la bao khoi.\r\n", chua.c_str());
+      }
     }
   }
   for (uint8_t i = 0; i < SO_PHONG; i++) {
@@ -544,7 +552,10 @@ void xuLyLenh(String s) {
     inKhoiTho = !inKhoiTho;
     inKhoi(khoiThoCuoi);
     Serial.printf("In khoi tho moi khi doi: %s%s\r\n", inKhoiTho ? "BAT" : "TAT",
-                  loiDuongKhoi ? " | DANG LOI DUONG DOC KHOI" : "");
+                  "");
+    String chua;
+    for (uint8_t i = 0; i < SO_PHONG; i++) if (!khoiSanSang[i]) { chua += ' '; chua += DS_PHONG[i]; }
+    if (chua.length()) Serial.printf("Cam bien khoi chua kich hoat:%s (keo ppm ve < 3 ppm)\r\n", chua.c_str());
   } else {
     Serial.println("Lenh: dat, tha, nhieu, loi, hetloi, khoi, hetkhoi, tattieng, capdien <phong|all>,");
     Serial.println("      mqtt on|off, treo, trangthai, khoiraw");

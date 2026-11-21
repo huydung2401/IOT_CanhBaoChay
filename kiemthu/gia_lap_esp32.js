@@ -12,6 +12,7 @@
  *   loi <phong>              giả lập cảm biến hỏng  hetloi <phong>  hết hỏng
  *   khoi <phong>             có khói (MQ-2)         hetkhoi <phong> hết khói
  *   tattieng <esp01|esp02>   bấm nút tắt tiếng 5 phút
+ *   toc <esp01|esp02> <%>    giả lập Wokwi chạy chậm (ví dụ toc esp01 20)
  *   capdien <phong|all>      giữ nút 3 s: cấp lại điện phòng đã hết báo động
  *   dung <esp01|esp02>       ngừng gửi (mô phỏng rớt mạng / dừng Wokwi)
  *   chay <esp01|esp02>       gửi lại
@@ -30,9 +31,18 @@ class ThietBi {
   constructor(ma, dsPhong, client) {
     this.ma = ma; this.dsPhong = dsPhong; this.client = client;
     this.dangChay = true;
+    this.toc = 100;          // % tốc độ, giả lập Wokwi chạy chậm (lệnh "toc esp01 20")
+    this.iGui = 0;
     this.khoiTao();
-    this.tDoc = setInterval(() => this.doc(), CHU_KY_DOC_MS);
-    this.tGui = setInterval(() => this.guiTatCa(), CHU_KY_GUI_MS);
+    const vongDoc = () => { this.doc(); this.tDoc = setTimeout(vongDoc, CHU_KY_DOC_MS * 100 / this.toc); };
+    // Như firmware: rải đều, mỗi CHU_KY_GUI_MS / số phòng gửi 1 phòng
+    const vongGui = () => {
+      if (this.dangChay) this.gui(this.dsPhong[this.iGui]);
+      this.iGui = (this.iGui + 1) % this.dsPhong.length;
+      this.tGui = setTimeout(vongGui, CHU_KY_GUI_MS / this.dsPhong.length * 100 / this.toc);
+    };
+    this.tDoc = setTimeout(vongDoc, CHU_KY_DOC_MS);
+    this.tGui = setTimeout(vongGui, 50);
   }
   khoiTao() {
     this.phong = {};
@@ -131,6 +141,7 @@ function batDau(url, inLog = true) {
         ds.forEach(d => d.kiemThayDoi());
         break;
       case 'dung': if (tb) tb.dangChay = false; break;
+      case 'toc': if (tb) { tb.toc = Math.max(1, Math.min(100, parseInt(b, 10) || 100)); console.log(tb.ma, 'toc do', tb.toc + '%'); } break;
       case 'chay': if (tb) { tb.dangChay = true; tb.guiTatCa(); } break;
       case 'reset': if (tb) { tb.khoiTao(); tb.guiTatCa(); } break;
       case 'trangthai':
@@ -140,7 +151,7 @@ function batDau(url, inLog = true) {
                       x.ngatDien ? 'NGAT DIEN' : '-', d.dangChay ? '' : '(dung)');
         return;
       case 'thoat': ds.forEach(d => d.dung()); client.end(); process.exit(0);
-      default: console.log('Lenh: dat, tha, loi, hetloi, khoi, hetkhoi, tattieng, capdien, dung, chay, reset, trangthai, thoat'); return;
+      default: console.log('Lenh: dat, tha, loi, hetloi, khoi, hetkhoi, tattieng, capdien, toc, dung, chay, reset, trangthai, thoat'); return;
     }
     if (inLog) console.log('OK:', dong.trim());
   }

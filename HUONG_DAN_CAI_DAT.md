@@ -73,7 +73,7 @@ Lần sau chỉ cần double-click `chay_he_thong.bat`, khoảng 30 giây là l�
 ### Tạo tình huống trên mạch Wokwi
 
 - **Nóng lên:** bấm vào cảm biến nhiệt DHT22 của một phòng, kéo nhiệt độ lên 39 °C (CHÚ Ý) hoặc 47 °C (BÁO ĐỘNG, ngắt điện phòng).
-- **Có khói:** bấm vào cảm biến khói MQ-2 (hàng trên cùng), kéo **ppm** lên gần tối đa. Cảm biến khói cần **20 giây làm nóng** sau khi bật, trước đó không báo khói.
+- **Có khói:** cảm biến khói MQ-2 nằm ở hàng trên cùng. Wokwi luôn khởi động chúng ở 400 ppm, nên lần đầu phải **kích hoạt**: đợi 20 giây làm nóng, bấm vào cảm biến, **kéo ppm về dưới 3 ppm** (Serial in `cam bien khoi da kich hoat`). Sau đó **kéo lên trên 10 ppm là báo khói**, kéo về dưới 3 ppm là hết. Chỉ cần kích hoạt những phòng định demo.
 - **Nút vàng TẮT TIẾNG:** bấm ngắn = tắt còi 5 phút (đèn vẫn nháy); giữ 3 giây = cấp lại điện các phòng đã hết báo động.
 - **Nút xanh dương:** ngắt / nối lại MQTT, để thử MẤT KẾT NỐI.
 - **Công tắc gạt** ở 2 phòng: giả lập cảm biến nhiệt hỏng.
@@ -131,7 +131,7 @@ Nếu `git pull` báo xung đột vì bạn đã sửa file, cách đơn giản 
 | Dashboard trắng / không mở được | Đợi thêm 30 giây rồi tải lại trang. Vẫn không được: mở cửa sổ Node-RED dưới thanh tác vụ xem lỗi |
 | Nhiều phòng **MẤT KẾT NỐI** rồi tự hết | Cửa sổ VS Code bị thu nhỏ/che. Để hai cửa sổ hiện, xem % tốc độ góc phải khung Wokwi nên trên 50% |
 | Tất cả phòng **MẤT KẾT NỐI** | Mạng chặn broker `broker.emqx.io` cổng 1883 (mạng trường, công ty). Thử Wi-Fi điện thoại |
-| Cả 20 phòng báo khói ngay khi chạy | Bấm ⟳ hai khung Wokwi. Serial in `[khoi] LOI ...` thì gõ `khoiraw`, chụp gửi nhóm |
+| Kéo ppm lên mà không báo khói | Cảm biến chưa kích hoạt: kéo ppm về dưới 3 ppm trước, rồi mới kéo lên. Gõ `trangthai` để xem phòng nào chưa kích hoạt |
 | Không nghe còi | Bấm chuột vào khung Wokwi một lần; kiểm tra loa máy |
 | VS Code ghi **[Administrator]** trên thanh tiêu đề, mô phỏng không mở | Đóng hết VS Code, chạy lại `chay_he_thong.bat` bằng double-click thường |
 | Cửa sổ đen báo cổng **1880** đang dùng | Đã có Node-RED khác chạy. Đóng nó (hoặc khởi động lại máy) rồi chạy lại |

@@ -81,7 +81,7 @@ Chưa chạy được ở đây: mạch Wokwi thật (cần tài khoản/trình 
 
 - **Logic ESP32** (`kiemthu/test_logic.py`): 53 kiểm tra, 53 đạt (27 của v1.1 và 26 mới cho K20–K24).
 - **Biên dịch**: không lỗi trên ESP32 core 2.0.17 và 3.0.7, cả bản thường lẫn bản bật TLS. Firmware VS Code trong `wokwi/espXX/build/` đã dựng lại.
-- **Node-RED đầu-cuối** (`kiemthu/e2e_v12.py`): broker cục bộ, giả lập 2 ESP32, Telegram giả lập (máy chủ HTTP đóng vai api.telegram.org), CSDL bắt đầu từ bản v1.1. 43 kiểm tra, 43 đạt.
+- **Node-RED đầu-cuối** (`kiemthu/e2e_v12.py`): broker cục bộ, giả lập 2 ESP32, Telegram giả lập (máy chủ HTTP đóng vai api.telegram.org), CSDL bắt đầu từ bản v1.1. 47 kiểm tra, 47 đạt.
 
 | Mã | Tình huống | Kết quả | Còn phải chạy trên Wokwi / thật |
 | --- | --- | --- | --- |
@@ -125,3 +125,4 @@ Chưa chạy ở đây: mạch Wokwi v1.2 (MQ-2, 74HC165, rơ-le) chưa mở b�
 - **Biến `TELEGRAM_API`** chỉ để kiểm thử với máy chủ giả; dùng thật thì để trống.
 - **Nhật ký ghi theo trạng thái hiển thị** (6 trạng thái mục 4.4), tính ở Node-RED mỗi giây, nên mất kết nối cũng được ghi dù ESP32 không gửi được gì. Tắt tiếng và khởi động lại là của cả thiết bị nên ghi một dòng cho tầng, không ghi 10 dòng.
 - **`cap_nhat_flow.js` chỉ thay các node có id `cbc_...`**, giữ biến Telegram và node broker đang chạy, nên đổi broker sang TLS trong editor rồi cập nhật flow cũng không mất.
+- **Ngưỡng mất kết nối tự giãn theo tốc độ Wokwi (19/11/2026).** Trên máy nhóm, Wokwi v1.2 chạy 13–22% tốc độ thật, nên chu kỳ 5 s của mỗi phòng thành 25–40 s thật và các phòng lần lượt báo MẤT KẾT NỐI theo vòng. Giờ một phòng chỉ báo mất kết nối khi (a) cả ESP32 im lặng 15 s, hoặc (b) riêng phòng đó quá 3 lần chu kỳ tin đo được của chính nó. Thiết bị mất mạng thật vẫn bị phát hiện sau 15 s (kiểm thử: chạy giả lập ở 15% tốc độ 75 s không có phòng nào báo oan; dừng thiết bị thì cả 10 phòng chuyển MẤT KẾT NỐI sau 15 s). Tiêu đề mỗi tầng hiện tốc độ mô phỏng ước tính, cam khi dưới 30%.
